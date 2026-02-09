@@ -1,107 +1,168 @@
-# PI Capacity Planner v3.1
+# PI Capacity Planner v3.2
 
-SAFe 6.0 Enterprise Planning Suite z hierarchią Epic→Feature→Story i automatyzacją.
+SAFe 6.0 Enterprise Planning Suite z integracjami, alertami i Monte Carlo.
 
-## ✨ Nowe funkcje v3.1
+## ✨ Nowe funkcje v3.2
 
-### 📂 Hierarchia Epic → Feature → Story
-- **Epic** - duże inicjatywy (poziom Portfolio)
-- **Feature** - dostarczane w PI (poziom Program)
-- **Story** - dostarczane w Sprint (poziom Team)
-- Linkowanie parent/child między poziomami
-- Widok hierarchiczny i płaski w Backlog
+### 🔌 Integracje (Integrations)
 
-### 📝 Description & Acceptance Criteria
-- Pole opisu dla każdego elementu
-- Acceptance Criteria w formacie checklist
-- **AI-generated AC** - kliknij "Generate AC with AI"
+| Źródło | Możliwości |
+|--------|------------|
+| **Jira** | Sync backlog, velocity historyczne |
+| **Azure DevOps** | Sync backlog, work items |
+| **BambooHR** | Import PTO/nieobecności |
+| **Workday** | Import PTO/nieobecności |
 
-### 🤖 Automatyzacje
-| Funkcja | Opis |
-|---------|------|
-| **Auto-status propagation** | Status Epic = najgorszy status Features |
-| **Auto-SP aggregation** | SP Epic = suma SP Features |
-| **Suggest Sprint** | Sugestia na podstawie capacity i zależności |
-| **Suggest Assignee** | Sugestia najmniej obciążonej osoby |
-| **AI Story Breakdown** | Rozbij Feature na Stories jednym kliknięciem |
+**Konfiguracja:**
+1. Wejdź w **Integrations**
+2. Podaj API URL, Token i Project Key
+3. Kliknij **Test Connection**
+4. Użyj **Sync Backlog** / **Sync Velocity** / **Sync PTO**
 
-### ⚙️ Ustawienia automatyzacji
-W Settings → Automation Settings możesz włączyć/wyłączyć:
-- Auto-propagate status
-- Auto-aggregate SP
-- Show auto-suggestions
+### 🔔 Alerty automatyczne
 
----
+| Alert | Kiedy wysyłany |
+|-------|----------------|
+| **Capacity > 100%** | Przekroczenie capacity zespołu |
+| **Capacity > 80%** | Ostrzeżenie o wysokim obciążeniu |
+| **Low confidence** | Średnia głosów < 3 |
+| **Sprint start** | Przypomnienie o starcie sprintu |
+| **PI Planning** | Przypomnienie o PI Planning |
+| **High risk** | Dodanie ryzyka o wysokiej ważności |
 
-## 🚀 Deploy
+**Kanały powiadomień:**
+- Slack (webhook)
+- MS Teams (webhook)
+- Email (SMTP)
 
-### 1. GitHub
-```bash
-# Wgraj wszystkie pliki do repo
-git add .
-git commit -m "PI Capacity Planner v3.1"
-git push
-```
+### 📊 Raporty i Monte Carlo
 
-### 2. Supabase
-1. Utwórz projekt na supabase.com
-2. Uruchom `supabase-schema.sql` w SQL Editor
-3. Skopiuj URL i anon key
+**Monte Carlo Simulation:**
+- 1,000 - 50,000 iteracji
+- Percentyle P50, P75, P90, P95
+- Histogram rozkładu czasu ukończenia
+- Bazuje na historycznym velocity zespołów
 
-### 3. Vercel
-1. Import z GitHub
-2. Dodaj Environment Variables:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-3. Deploy!
+**Eksport:**
+- **CSV** - pełne dane do dalszej analizy
+- **PDF** - profesjonalny raport z wykresami
+
+**Capacity Forecast:**
+- Prognoza na kolejne PI
+- Porównanie load vs capacity
 
 ---
 
-## 📁 Struktura danych
-
-```
-Epic (Portfolio level)
-├── Feature 1 (Program level)
-│   ├── Story 1.1 (Team level)
-│   ├── Story 1.2
-│   └── Story 1.3
-└── Feature 2
-    └── Story 2.1
-```
-
-### Pola elementu
-```typescript
-{
-  id: string,
-  type: 'epic' | 'feature' | 'story',
-  name: string,
-  description: string,
-  acceptance_criteria: string,
-  story_points: number,
-  business_value: number (1-10),
-  team_id: string | null,
-  assignee_id: string | null,
-  sprint: number | null,
-  status: 'notStarted' | 'inProgress' | 'done' | 'blocked',
-  parent_id: string | null
-}
-```
-
----
-
-## 🔧 Development
+## 🚀 Quick Start
 
 ```bash
-npm install
-npm run dev
+# 1. Pobierz ZIP i rozpakuj
+# 2. Wgraj do GitHub
+git add . && git commit -m "v3.2" && git push
+
+# 3. Deploy na Vercel z env vars:
+#    VITE_SUPABASE_URL
+#    VITE_SUPABASE_ANON_KEY
 ```
 
 ---
 
-## 🎯 Flow automatyzacji
+## 📁 Architektura
 
-1. **Tworzysz Epic** - np. "User Management Platform"
-2. **Dodajesz Features** - linkujesz do Epic
-3. **Klikasz "Breakdown to Stories"** - AI generuje Stories
-4. **Przypisujesz zespół** - klikasz "Suggest Sprint" i "Suggest Assignee"
-5. **Status się propaguje** - gdy Stories są done, Feature i Epic automatycznie się aktualizują
+```
+┌─────────────────────────────────────────────────────────┐
+│                    PI Capacity Planner                   │
+├─────────────────────────────────────────────────────────┤
+│  Views:                                                  │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────────┐   │
+│  │Dashboard│ │ Backlog │ │Capacity │ │Program Board│   │
+│  └─────────┘ └─────────┘ └─────────┘ └─────────────┘   │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────────┐   │
+│  │Objectives│ │  ROAM   │ │ Voting  │ │Integrations │   │
+│  └─────────┘ └─────────┘ └─────────┘ └─────────────┘   │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐                   │
+│  │ Reports │ │Settings │ │ History │                    │
+│  └─────────┘ └─────────┘ └─────────┘                   │
+├─────────────────────────────────────────────────────────┤
+│  Engines:                                                │
+│  ┌────────────────┐ ┌────────────────┐ ┌─────────────┐ │
+│  │IntegrationEngine│ │  AlertEngine   │ │MonteCarloEngine│
+│  │ - Jira API     │ │ - Slack webhook│ │ - Simulation │ │
+│  │ - Azure API    │ │ - Teams webhook│ │ - Histogram  │ │
+│  │ - BambooHR API │ │ - Email SMTP   │ │ - Percentile │ │
+│  └────────────────┘ └────────────────┘ └─────────────┘ │
+├─────────────────────────────────────────────────────────┤
+│  Backend: Supabase (Auth, DB, Realtime)                 │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🎯 Flow integracji
+
+```
+┌─────────┐     ┌──────────┐     ┌─────────────────┐
+│  Jira   │────▶│ PI Planner│────▶│ Slack/Teams/Email│
+│  Azure  │     │          │     │                 │
+│ BambooHR│     │  Monte   │     │    Alerty       │
+│ Workday │     │  Carlo   │     │                 │
+└─────────┘     └──────────┘     └─────────────────┘
+      │              │                   │
+      ▼              ▼                   ▼
+  - Backlog      - P50/P75/P90      - Capacity > 100%
+  - Velocity     - Histogram        - Low confidence
+  - PTO/Abs      - Forecast         - Sprint reminder
+```
+
+---
+
+## 📈 Monte Carlo - jak to działa?
+
+1. **Input:** Historyczne velocity zespołów (ostatnie 6 sprintów)
+2. **Model:** Rozkład normalny z mean i std dev
+3. **Symulacja:** 10,000 losowych scenariuszy
+4. **Output:**
+   - P50 = 50% szans na ukończenie w X sprintów
+   - P75 = 75% szans (rekomendowane dla planowania)
+   - P90 = 90% szans (bezpieczny bufor)
+
+**Interpretacja:**
+- Jeśli P50 = 4, P90 = 6 → planuj 5-6 sprintów
+- Duża różnica P50-P90 = wysoka niepewność
+
+---
+
+## 🔧 Konfiguracja webhooków
+
+### Slack
+```
+https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
+```
+
+### MS Teams
+```
+https://outlook.office.com/webhook/...
+```
+
+### Email (SMTP)
+```
+smtp://user:pass@smtp.gmail.com:587
+```
+
+---
+
+## 📦 Pliki
+
+| Plik | Opis |
+|------|------|
+| `src/App.jsx` | Główna aplikacja (~1100 linii) |
+| `src/supabase.js` | Klient Supabase |
+| `supabase-schema.sql` | Schema bazy danych |
+
+---
+
+## 🛡️ Bezpieczeństwo
+
+- API keys przechowywane w localStorage (do poprawy: Supabase secrets)
+- Webhooks wysyłane server-side (wymaga backend proxy w produkcji)
+- RLS na wszystkich tabelach Supabase
