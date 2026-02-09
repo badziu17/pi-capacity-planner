@@ -1,99 +1,107 @@
-# PI Capacity Planner v3.0
+# PI Capacity Planner v3.1
 
-SAFe 6.0 Enterprise Planning Suite z Supabase.
+SAFe 6.0 Enterprise Planning Suite z hierarchią Epic→Feature→Story i automatyzacją.
 
-## 🚀 Szybki Deploy na Vercel
+## ✨ Nowe funkcje v3.1
 
-### 1. Wgraj pliki na GitHub
+### 📂 Hierarchia Epic → Feature → Story
+- **Epic** - duże inicjatywy (poziom Portfolio)
+- **Feature** - dostarczane w PI (poziom Program)
+- **Story** - dostarczane w Sprint (poziom Team)
+- Linkowanie parent/child między poziomami
+- Widok hierarchiczny i płaski w Backlog
 
-Opcja A - przez GitHub.com:
-1. Wejdź na https://github.com/badziu17/pi-capacity-planner
-2. Kliknij "Add file" → "Upload files"
-3. Przeciągnij wszystkie pliki z tego ZIP (nie folder, pliki!)
-4. Commit changes
+### 📝 Description & Acceptance Criteria
+- Pole opisu dla każdego elementu
+- Acceptance Criteria w formacie checklist
+- **AI-generated AC** - kliknij "Generate AC with AI"
 
-Opcja B - przez git:
+### 🤖 Automatyzacje
+| Funkcja | Opis |
+|---------|------|
+| **Auto-status propagation** | Status Epic = najgorszy status Features |
+| **Auto-SP aggregation** | SP Epic = suma SP Features |
+| **Suggest Sprint** | Sugestia na podstawie capacity i zależności |
+| **Suggest Assignee** | Sugestia najmniej obciążonej osoby |
+| **AI Story Breakdown** | Rozbij Feature na Stories jednym kliknięciem |
+
+### ⚙️ Ustawienia automatyzacji
+W Settings → Automation Settings możesz włączyć/wyłączyć:
+- Auto-propagate status
+- Auto-aggregate SP
+- Show auto-suggestions
+
+---
+
+## 🚀 Deploy
+
+### 1. GitHub
 ```bash
-git clone https://github.com/badziu17/pi-capacity-planner.git
-cd pi-capacity-planner
-# skopiuj wszystkie pliki z ZIP do tego folderu
+# Wgraj wszystkie pliki do repo
 git add .
-git commit -m "PI Capacity Planner v3.0"
+git commit -m "PI Capacity Planner v3.1"
 git push
 ```
 
-### 2. Skonfiguruj Supabase
+### 2. Supabase
+1. Utwórz projekt na supabase.com
+2. Uruchom `supabase-schema.sql` w SQL Editor
+3. Skopiuj URL i anon key
 
-1. Wejdź na https://supabase.com i załóż konto
-2. Create new project
-3. **Settings → API** - skopiuj:
-   - Project URL: `https://xxx.supabase.co`
-   - anon public key: `eyJhbGciOiJI...`
-4. **SQL Editor** - uruchom cały plik `supabase-schema.sql`
-5. **Authentication → Settings → Email Auth** - włącz rejestrację
-
-### 3. Deploy na Vercel
-
-1. Wejdź na https://vercel.com
-2. Import z GitHub → wybierz `pi-capacity-planner`
-3. W **Environment Variables** dodaj:
-   - `VITE_SUPABASE_URL` = twój Project URL
-   - `VITE_SUPABASE_ANON_KEY` = twój anon key
-4. Deploy!
-
-### 4. Zarejestruj użytkowników
-
-Po deploy wejdź na URL aplikacji i zarejestruj konta dla zespołu.
+### 3. Vercel
+1. Import z GitHub
+2. Dodaj Environment Variables:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+3. Deploy!
 
 ---
 
-## ✨ Funkcjonalności v3.0
+## 📁 Struktura danych
 
-### Nowe w tej wersji:
-- ✅ **Edytowalne zespoły i osoby w Settings** - kliknij na nazwę aby edytować
-- ✅ **Przypisanie osoby do Feature** - wybierz zespół i osobę realizującą
-- ✅ **Supabase Auth** - logowanie i rejestracja
-- ✅ **Real-time sync** - zmiany widoczne dla wszystkich użytkowników
-- ✅ **Historia zmian** - kto, co, kiedy zmienił
+```
+Epic (Portfolio level)
+├── Feature 1 (Program level)
+│   ├── Story 1.1 (Team level)
+│   ├── Story 1.2
+│   └── Story 1.3
+└── Feature 2
+    └── Story 2.1
+```
 
-### Moduły:
-| Moduł | Funkcjonalność |
-|-------|----------------|
-| **Dashboard** | Przegląd PI, capacity zespołów, features, ryzyka |
-| **Capacity** | Planowanie MD z nieobecnościami per osoba/sprint |
-| **Program Board** | Drag-and-drop features, milestones, dependencies |
-| **PI Objectives** | Committed/Uncommitted, Predictability Measure |
-| **ROAM Board** | Zarządzanie ryzykami z drag-and-drop |
-| **Confidence Vote** | Fist of Five z timerem |
-| **Settings** | Edycja zespołów, członków, język (EN/PL) |
-| **History** | Pełna historia zmian z timestampami |
+### Pola elementu
+```typescript
+{
+  id: string,
+  type: 'epic' | 'feature' | 'story',
+  name: string,
+  description: string,
+  acceptance_criteria: string,
+  story_points: number,
+  business_value: number (1-10),
+  team_id: string | null,
+  assignee_id: string | null,
+  sprint: number | null,
+  status: 'notStarted' | 'inProgress' | 'done' | 'blocked',
+  parent_id: string | null
+}
+```
 
 ---
 
-## 🛠 Development
+## 🔧 Development
 
 ```bash
-# Zainstaluj zależności
 npm install
-
-# Uruchom lokalnie
 npm run dev
-
-# Build
-npm run build
 ```
 
 ---
 
-## 📁 Struktura
+## 🎯 Flow automatyzacji
 
-```
-├── src/
-│   ├── App.jsx         # Główna aplikacja
-│   ├── supabase.js     # Supabase client
-│   ├── main.jsx        # Entry point
-│   └── index.css       # Tailwind
-├── supabase-schema.sql # Schema bazy danych
-├── package.json
-└── vite.config.js
-```
+1. **Tworzysz Epic** - np. "User Management Platform"
+2. **Dodajesz Features** - linkujesz do Epic
+3. **Klikasz "Breakdown to Stories"** - AI generuje Stories
+4. **Przypisujesz zespół** - klikasz "Suggest Sprint" i "Suggest Assignee"
+5. **Status się propaguje** - gdy Stories są done, Feature i Epic automatycznie się aktualizują
