@@ -1,168 +1,160 @@
-# PI Capacity Planner v3.2
+# PI Capacity Planner v4.0 — Capacity vs Demand
 
-SAFe 6.0 Enterprise Planning Suite z integracjami, alertami i Monte Carlo.
+**"Why" tego narzędzia: Widzieć capacity vs demand na pierwszy rzut oka.**
 
-## ✨ Nowe funkcje v3.2
+## 🎯 Core Screen: Capacity Board
 
-### 🔌 Integracje (Integrations)
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  CAPACITY VS DEMAND — PI 2025.1                    ART Total: 340/375 SP   │
+│                                                    Load Factor: 91%        │
+├──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────┤
+│ Team         │ Sprint 1    │ Sprint 2    │ Sprint 3    │ Sprint 4    │ IP  │
+├──────────────┼─────────────┼─────────────┼─────────────┼─────────────┼─────┤
+│ Team Alpha   │ ██████░░    │ ████████    │ █████░░░    │ ██████░░    │ ██  │
+│ 40 SP/sprint │ 35/40 (88%) │ 40/40 100%  │ 25/40 (63%) │ 32/40 (80%) │ 8/8 │
+│              │ • OAuth2    │ • Profiles  │ • Permiss.  │             │     │
+│              │ • Email ver │ • Avatar    │             │             │     │
+├──────────────┼─────────────┼─────────────┼─────────────┼─────────────┼─────┤
+│ Team Beta    │ █████████   │ ██████░░    │ ████░░░░    │             │     │
+│ 35 SP/sprint │ 48/35 137%! │ 35/35 100%  │ 20/35 (57%) │ 0/35        │     │
+│              │ • REST API  │ • Charts    │             │             │     │
+│              │ • DB Migr.  │             │             │             │     │
+└──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────┘
 
-| Źródło | Możliwości |
-|--------|------------|
-| **Jira** | Sync backlog, velocity historyczne |
-| **Azure DevOps** | Sync backlog, work items |
-| **BambooHR** | Import PTO/nieobecności |
-| **Workday** | Import PTO/nieobecności |
+🟢 ≤80% Healthy   🟡 80-100% Warning   🔴 >100% Overcommit
+```
 
-**Konfiguracja:**
-1. Wejdź w **Integrations**
-2. Podaj API URL, Token i Project Key
-3. Kliknij **Test Connection**
-4. Użyj **Sync Backlog** / **Sync Velocity** / **Sync PTO**
+## ✨ Funkcjonalności
 
-### 🔔 Alerty automatyczne
+### 1️⃣ Capacity Board (główny ekran)
+- **Tabela zespół × sprint** z wizualizacją load factor
+- **Kolory:** zielony ≤80%, żółty 80-100%, czerwony >100%
+- **Drag & drop** - przeciągnij item z "Unplanned" do komórki
+- **ART Total** - suma capacity i demand dla całego ART
+- **Szczegóły w komórce** - lista przypisanych items
 
-| Alert | Kiedy wysyłany |
-|-------|----------------|
-| **Capacity > 100%** | Przekroczenie capacity zespołu |
-| **Capacity > 80%** | Ostrzeżenie o wysokim obciążeniu |
-| **Low confidence** | Średnia głosów < 3 |
-| **Sprint start** | Przypomnienie o starcie sprintu |
-| **PI Planning** | Przypomnienie o PI Planning |
-| **High risk** | Dodanie ryzyka o wysokiej ważności |
+### 2️⃣ Konfiguracja zespołów
+- **Definicja zespołu:** nazwa, kolor, velocity (SP/sprint)
+- **Członkowie:** imię, FTE (0.1-1.0), rola
+- **Nieobecności:** dni absencji per osoba per sprint
+- **Święta:** kalendarz PL 2025 (13 dni)
+- **Capacity = workdays × FTE - absences**
 
-**Kanały powiadomień:**
-- Slack (webhook)
-- MS Teams (webhook)
-- Email (SMTP)
+### 3️⃣ Struktura SAFe
+```
+ART (Agile Release Train)
+├── Team Alpha
+├── Team Beta  
+└── Team Gamma
+    └── PI 2025.1 (PI44)
+        ├── Sprint 1 (10 work days)
+        ├── Sprint 2
+        ├── Sprint 3
+        ├── Sprint 4
+        └── IP Sprint (Innovation & Planning)
+```
 
-### 📊 Raporty i Monte Carlo
+### 4️⃣ Backlog & Work Items
+- **Typy:** Epic, Feature, Story, Enabler
+- **Quick Add:** typ + nazwa + SP + team → Enter
+- **Estymacja:** Fibonacci (1,2,3,5,8,13,20,40,100)
+- **WSJF:** priorytetyzacja
+- **Przypisanie:** team + sprint (drag & drop lub edit)
 
-**Monte Carlo Simulation:**
-- 1,000 - 50,000 iteracji
-- Percentyle P50, P75, P90, P95
-- Histogram rozkładu czasu ukończenia
-- Bazuje na historycznym velocity zespołów
-
-**Eksport:**
-- **CSV** - pełne dane do dalszej analizy
-- **PDF** - profesjonalny raport z wykresami
-
-**Capacity Forecast:**
-- Prognoza na kolejne PI
-- Porównanie load vs capacity
+### 5️⃣ Program Board
+- **Widok Features** per team per sprint
+- **Milestones** (MVP, Beta Launch)
+- **Dependencies** wizualizacja
 
 ---
 
 ## 🚀 Quick Start
 
 ```bash
-# 1. Pobierz ZIP i rozpakuj
-# 2. Wgraj do GitHub
-git add . && git commit -m "v3.2" && git push
+# 1. Rozpakuj ZIP
+unzip pi-capacity-planner-v4.zip
 
-# 3. Deploy na Vercel z env vars:
-#    VITE_SUPABASE_URL
-#    VITE_SUPABASE_ANON_KEY
+# 2. Install & run
+cd pi-capacity-planner-v3
+npm install
+npm run dev
+
+# 3. Otwórz http://localhost:5173
+# 4. Kliknij "Demo Mode" - dane przykładowe załadowane
 ```
 
 ---
 
-## 📁 Architektura
+## 📊 Jak działa Capacity?
 
+### Wzór na Capacity (SP)
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    PI Capacity Planner                   │
-├─────────────────────────────────────────────────────────┤
-│  Views:                                                  │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────────┐   │
-│  │Dashboard│ │ Backlog │ │Capacity │ │Program Board│   │
-│  └─────────┘ └─────────┘ └─────────┘ └─────────────┘   │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────────┐   │
-│  │Objectives│ │  ROAM   │ │ Voting  │ │Integrations │   │
-│  └─────────┘ └─────────┘ └─────────┘ └─────────────┘   │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐                   │
-│  │ Reports │ │Settings │ │ History │                    │
-│  └─────────┘ └─────────┘ └─────────┘                   │
-├─────────────────────────────────────────────────────────┤
-│  Engines:                                                │
-│  ┌────────────────┐ ┌────────────────┐ ┌─────────────┐ │
-│  │IntegrationEngine│ │  AlertEngine   │ │MonteCarloEngine│
-│  │ - Jira API     │ │ - Slack webhook│ │ - Simulation │ │
-│  │ - Azure API    │ │ - Teams webhook│ │ - Histogram  │ │
-│  │ - BambooHR API │ │ - Email SMTP   │ │ - Percentile │ │
-│  └────────────────┘ └────────────────┘ └─────────────┘ │
-├─────────────────────────────────────────────────────────┤
-│  Backend: Supabase (Auth, DB, Realtime)                 │
-└─────────────────────────────────────────────────────────┘
+Team Capacity per Sprint = Base Velocity × Availability Factor
+
+Availability Factor = 
+  (Total Work Days - Sum of Absences) / Total Work Days × Avg FTE
+
+Przykład Team Alpha, Sprint 2:
+- Base Velocity: 40 SP
+- Work Days: 10
+- Anna: 2 dni PTO → 8 dni
+- Maria: FTE 0.8 → 8 dni effective
+- Piotr, Jan: pełne 10 dni
+- Availability: (8+8+10+10) / (4×10) = 0.9
+- Effective Capacity: 40 × 0.9 = 36 SP
 ```
 
----
-
-## 🎯 Flow integracji
-
+### Load Factor
 ```
-┌─────────┐     ┌──────────┐     ┌─────────────────┐
-│  Jira   │────▶│ PI Planner│────▶│ Slack/Teams/Email│
-│  Azure  │     │          │     │                 │
-│ BambooHR│     │  Monte   │     │    Alerty       │
-│ Workday │     │  Carlo   │     │                 │
-└─────────┘     └──────────┘     └─────────────────┘
-      │              │                   │
-      ▼              ▼                   ▼
-  - Backlog      - P50/P75/P90      - Capacity > 100%
-  - Velocity     - Histogram        - Low confidence
-  - PTO/Abs      - Forecast         - Sprint reminder
+Load = Demand / Capacity × 100%
+
+🟢 ≤80%  — Healthy buffer for unknowns
+🟡 80-100% — At risk, no buffer
+🔴 >100% — Overcommit! Needs rebalancing
 ```
 
 ---
 
-## 📈 Monte Carlo - jak to działa?
+## 🗂️ Pliki
 
-1. **Input:** Historyczne velocity zespołów (ostatnie 6 sprintów)
-2. **Model:** Rozkład normalny z mean i std dev
-3. **Symulacja:** 10,000 losowych scenariuszy
-4. **Output:**
-   - P50 = 50% szans na ukończenie w X sprintów
-   - P75 = 75% szans (rekomendowane dla planowania)
-   - P90 = 90% szans (bezpieczny bufor)
-
-**Interpretacja:**
-- Jeśli P50 = 4, P90 = 6 → planuj 5-6 sprintów
-- Duża różnica P50-P90 = wysoka niepewność
-
----
-
-## 🔧 Konfiguracja webhooków
-
-### Slack
 ```
-https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
-```
-
-### MS Teams
-```
-https://outlook.office.com/webhook/...
-```
-
-### Email (SMTP)
-```
-smtp://user:pass@smtp.gmail.com:587
+pi-capacity-planner-v3/
+├── src/
+│   ├── App.jsx          # Główna aplikacja (1400+ linii)
+│   ├── supabase.js      # Klient Supabase (opcjonalny)
+│   ├── main.jsx
+│   └── index.css
+├── public/favicon.svg
+├── package.json
+├── vite.config.js
+├── tailwind.config.js
+└── README.md
 ```
 
 ---
 
-## 📦 Pliki
+## 🎨 UI/UX Design
 
-| Plik | Opis |
-|------|------|
-| `src/App.jsx` | Główna aplikacja (~1100 linii) |
-| `src/supabase.js` | Klient Supabase |
-| `supabase-schema.sql` | Schema bazy danych |
+- **Glass morphism** z ciemnym tematem
+- **Gradient accents** cyan → emerald
+- **Responsive** tables z sticky kolumnami
+- **Hover states** i **transitions**
+- **Bilingual** EN/PL
 
 ---
 
-## 🛡️ Bezpieczeństwo
+## 🔧 Rozszerzenia (TODO)
 
-- API keys przechowywane w localStorage (do poprawy: Supabase secrets)
-- Webhooks wysyłane server-side (wymaga backend proxy w produkcji)
-- RLS na wszystkich tabelach Supabase
+- [ ] Supabase persistence
+- [ ] Jira/Azure DevOps sync
+- [ ] Slack/Teams alerts
+- [ ] Monte Carlo forecasting
+- [ ] PDF/CSV export
+- [ ] Real-time collaboration
+
+---
+
+## 📝 Licencja
+
+MIT — do użytku wewnętrznego i komercyjnego.
