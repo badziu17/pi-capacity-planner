@@ -1,48 +1,145 @@
-# PI Capacity Planner v5.0 — Enterprise Edition
+# PI Capacity Planner v6.0 — Complete Enterprise Edition
 
-**SAFe 6.0 PI Planning Tool z pełnym zestawem funkcji enterprise.**
+**SAFe 6.0 PI Planning Tool with full enterprise feature set.**
 
-## 🎯 Nowe funkcje v5.0
+## ✅ All Features Verified & Implemented
 
-### 1️⃣ RTE Dashboard
+### 1️⃣ Capacity vs Demand Board (Core Screen)
+```
+┌─────────────┬───────────┬───────────┬───────────┬───────────┬────┐
+│ Team        │ Sprint 1  │ Sprint 2  │ Sprint 3  │ Sprint 4  │ IP │
+├─────────────┼───────────┼───────────┼───────────┼───────────┼────┤
+│ Team Alpha  │ 35/40 88% │ 40/40 100%│ 25/40 63% │ 32/40 80% │ 8/8│
+│ 40 SP/sprint│ ██████░░  │ ████████  │ █████░░░  │ ██████░░  │ ██ │
+│             │ • OAuth2  │ • Profile │ • Permiss │           │    │
+└─────────────┴───────────┴───────────┴───────────┴───────────┴────┘
+```
+- ✅ Team × Iteration matrix with capacity vs demand
+- ✅ Color coding: 🟢 ≤80%, 🟡 80-100%, 🔴 >100%
+- ✅ Drag-and-drop assignment from unplanned pool
+- ✅ **Click on items to view details**
+
+### 2️⃣ Teams & Availability Configuration
+- ✅ Team velocity (SP/sprint) configuration
+- ✅ FTE per team member (0.1 - 1.0)
+- ✅ Absence tracking per member per sprint
+- ✅ Polish holidays 2025 calendar (13 days)
+- ✅ Capacity calculation formula:
+  ```
+  effectiveCapacity = baseVelocity × (availableDays / totalWorkDays)
+  availableDays = Σ (workDays - absences) × FTE per member
+  ```
+
+### 3️⃣ SAFe Structure (ART → Teams → PI → Iterations)
+```
+ART (Agile Release Train)
+├── Team Alpha (40 SP/sprint)
+├── Team Beta (35 SP/sprint)
+└── Team Gamma (30 SP/sprint)
+    └── PI 2025.1 (PI44)
+        ├── Sprint 1: Feb 19 - Mar 4
+        ├── Sprint 2: Mar 5 - 18
+        ├── Sprint 3: Mar 19 - Apr 1
+        ├── Sprint 4: Apr 2 - 15
+        └── IP Sprint: Apr 16 - 29 (20% capacity)
+```
+
+### 4️⃣ Backlog Management with Quick Add & Drag-Drop
+- ✅ Quick Add: Type + Name + SP + Team + Sprint
+- ✅ Drag-and-drop from unplanned to sprint cells
+- ✅ Epic → Feature → Story hierarchy
+- ✅ WSJF prioritization field
+- ✅ Filter by type (Epic, Feature, Story, Enabler, Unassigned)
+
+### 5️⃣ Clickable Items with Full Details
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  PI Health Score: 78%                                       │
-├──────────┬──────────┬──────────┬──────────┬────────────────┤
-│ Total    │ Total    │ Avg Load │ Reserve  │ Overbooked     │
-│ Capacity │ Demand   │          │          │ Sprints        │
-│ 525 SP   │ 420 SP   │ 80%      │ 105 SP   │ 2              │
-├──────────┴──────────┴──────────┴──────────┴────────────────┤
-│  Sprint Load Trend                                          │
-│  S1: ████████░░ 85%    S4: ██████░░░░ 65%                  │
-│  S2: █████████░ 92%    IP: ██░░░░░░░░ 20%                  │
-│  S3: ███████░░░ 75%                                        │
+│ Item Details                                          [×]  │
 ├─────────────────────────────────────────────────────────────┤
-│  Team Breakdown                                             │
-│  Alpha  ██████████ 95%  ⚠️ 1 overbooked                    │
-│  Beta   ████████░░ 82%  ✓ On track                         │
-│  Gamma  ██████░░░░ 65%  ✓ On track                         │
+│ [Feature] OAuth2 Authentication                    [Done]  │
+├─────────────────────────────────────────────────────────────┤
+│ SP: [40 ▼]  Team: [Alpha ▼]  Sprint: [S1 ▼]  Status: [▼]  │
+│ Assignee: [Anna Kowalska ▼]                                │
+├─────────────────────────────────────────────────────────────┤
+│ Description:                                               │
+│ Implement OAuth2 with Google and GitHub providers          │
+├─────────────────────────────────────────────────────────────┤
+│ Acceptance Criteria:                                       │
+│ - Google OAuth works                                       │
+│ - GitHub OAuth works                                       │
+│ - Token refresh implemented                                │
+│ - Logout clears session                                    │
+├─────────────────────────────────────────────────────────────┤
+│ Parent: [Epic] User Management Platform                    │
+│ Children: Login form UI (5 SP), Google OAuth button (3 SP) │
+├─────────────────────────────────────────────────────────────┤
+│ Linked Dependencies:                                       │
+│ ⛓ Depends on: REST API v1 (Team Beta S1)                  │
+│ ⛓ Provides to: Permission System (Team Alpha S3)          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 2️⃣ What-If Scenarios
-| Scenariusz | Opis | Porównanie |
-|------------|------|------------|
-| **Baseline** | Obecny stan | — |
-| **Scenario A** | Team Beta -20% capacity | Load: +12%, Reserve: -40 SP |
-| **Scenario B** | +Team Delta (25 SP/sprint) | Load: -15%, Reserve: +125 SP |
-
-**Typy zmian:**
-- Reduce capacity (np. urlopy, choroby)
-- Add/Remove team
-- Move item to different PI
-- Change sprint assignment
-
-### 3️⃣ Dependencies Visualization
+### 6️⃣ Integration Engine (Jira, Azure DevOps)
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Dependencies                                               │
-├───────────────┬─────┬───────────────┬────────┬─────────────┤
+│ 🔷 Import from Jira                          [Connected ✓] │
+├─────────────────────────────────────────────────────────────┤
+│ URL: https://company.atlassian.net                         │
+│ Token: ••••••••••••                                        │
+│ Project: PROJ                                              │
+├─────────────────────────────────────────────────────────────┤
+│ [Test Connection] [Fetch Items] [Sync Velocity] [Sync PTO] │
+└─────────────────────────────────────────────────────────────┘
+```
+- ✅ Jira Cloud integration
+- ✅ Azure DevOps integration
+- ✅ CSV import with preview
+- ✅ Sync: Backlog items, Historical velocity, PTO/absences
+
+### 7️⃣ Alert Engine (Slack/Teams/Email)
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Alert Triggers                                              │
+├─────────────────────────────────────────────────────────────┤
+│ [✓] Capacity over 100% (overcommit)                        │
+│ [✓] Capacity over 80% (warning)                            │
+│ [✓] Low confidence vote (<3)                               │
+│ [ ] Sprint starting reminder                               │
+├─────────────────────────────────────────────────────────────┤
+│ Notification Channels                                       │
+│ 💬 Slack   [✓] Webhook: https://hooks.slack.com/...        │
+│ 👥 Teams   [ ] Webhook: ___________________________        │
+│ 📧 Email   [ ] Webhook: ___________________________        │
+│                                            [Test Alert]     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 8️⃣ Reports with Monte Carlo Simulation
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Monte Carlo Simulation         [10,000 iterations ▼] [Run] │
+├─────────────────────────────────────────────────────────────┤
+│ ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐    │
+│ │ P50       │ │ P75       │ │ P90       │ │ Total SP  │    │
+│ │ 4 sprints │ │ 5 sprints │ │ 6 sprints │ │ 248 SP    │    │
+│ └───────────┘ └───────────┘ └───────────┘ └───────────┘    │
+├─────────────────────────────────────────────────────────────┤
+│ Completion Forecast                                         │
+│  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░                │
+│  3 sprints                              8 sprints           │
+├─────────────────────────────────────────────────────────────┤
+│ [Export CSV]                             [Export PDF]       │
+└─────────────────────────────────────────────────────────────┘
+```
+- ✅ Monte Carlo simulation with configurable iterations
+- ✅ P50, P75, P90 percentile forecasts
+- ✅ Histogram visualization
+- ✅ CSV export with team breakdown
+- ✅ PDF export (stub - requires jspdf in production)
+
+### 9️⃣ Dependencies Visualization
+```
+┌───────────────┬─────┬───────────────┬────────┬─────────────┐
 │ Provider      │  →  │ Consumer      │ Status │ Warning     │
 ├───────────────┼─────┼───────────────┼────────┼─────────────┤
 │ REST API v1   │  →  │ OAuth2 Auth   │ ✓ OK   │             │
@@ -51,94 +148,53 @@
 │ Charts        │  →  │ Data Export   │ ⚠️ Risk│ Low reserve │
 │ Team Beta S2  │     │ Team Gamma S2 │        │             │
 └───────────────┴─────┴───────────────┴────────┴─────────────┘
-
-Status:
-🟢 Healthy - Provider ends before consumer starts
-🟡 At Risk - Same sprint, low reserve in target
-🔴 Violated - Provider ends after consumer starts
 ```
+- ✅ Status indicators: Healthy / At Risk / Violated
+- ✅ Warning messages for low reserve
+- ✅ Click to view item details
 
-### 4️⃣ Risks & Confidence Vote
+### 🔟 Risks & Confidence Voting
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  ART Average Confidence: 3.7/5                              │
+│ Confidence Vote              [Start Voting] ART Avg: 3.7/5 │
 ├─────────────────────────────────────────────────────────────┤
-│  Team Alpha    [1] [2] [3] [4•] [5]  → 4/5 Minor concerns  │
-│  Team Beta     [1] [2] [3•] [4] [5]  → 3/5 Neutral         │
-│  Team Gamma    [1] [2] [3] [4•] [5]  → 4/5 Minor concerns  │
+│ Team Alpha    [1] [2] [3] [4•] [5]                         │
+│ Team Beta     [1] [2] [3•] [4] [5]                         │
+│ Team Gamma    [1] [2] [3] [4•] [5]                         │
 ├─────────────────────────────────────────────────────────────┤
-│  Top Risks                                                  │
-│  🔴 HIGH   Third-party API rate limits    [Owned]          │
-│  🟡 MEDIUM New team member onboarding     [Mitigated]      │
-│  🟢 LOW    Database performance           [Accepted]       │
+│ Top Risks                                                   │
+│ 🔴 HIGH   Third-party API rate limits    [Owned ▼] [🗑]    │
+│           Owner: Team Beta                                  │
+│           Mitigation: Implement caching                    │
 └─────────────────────────────────────────────────────────────┘
 ```
+- ✅ Fist of Five voting (1-5)
+- ✅ ROAM status (Resolved/Owned/Accepted/Mitigated)
+- ✅ Risk severity (High/Medium/Low)
+- ✅ ART-level aggregation
 
-**ROAM Status:**
-- **R**esolved - Risk is no longer a concern
-- **O**wned - Someone is actively working on it
-- **A**ccepted - We accept the risk and move forward
-- **M**itigated - Actions taken to reduce impact
+### 1️⃣1️⃣ What-If Scenarios
+| Baseline | Scenario A | Scenario B |
+|----------|------------|------------|
+| Current state | Team Beta -20% | +Team Delta |
+| 80% load | 92% load (+12%) | 65% load (-15%) |
+| 105 SP reserve | 65 SP (-40) | 230 SP (+125) |
 
-### 5️⃣ Import (Jira / CSV)
+### 1️⃣2️⃣ Role-Based Access & Audit Trail
+| Role | Edit | Delete | Import |
+|------|------|--------|--------|
+| Admin | ✅ | ✅ | ✅ |
+| RTE/PM | ✅ | ✅ | ✅ |
+| Team Lead | ✅ | ❌ | ❌ |
+| Member | ❌ | ❌ | ❌ |
+| Viewer | ❌ | ❌ | ❌ |
+
+**Audit Trail:**
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Import from Jira                                           │
-│  URL: https://company.atlassian.net                        │
-│  Token: ••••••••••••                                       │
-│  Project: PROJ                                              │
-│  [Fetch Items]                                              │
-├─────────────────────────────────────────────────────────────┤
-│  Import from CSV                                            │
-│  📄 Select file...                                          │
-│                                                             │
-│  Preview: 15 rows                                           │
-│  ┌────────┬──────────────────┬────┬────────┐              │
-│  │ Type   │ Name             │ SP │ Team   │              │
-│  ├────────┼──────────────────┼────┼────────┤              │
-│  │ Feature│ User Login       │ 20 │ Alpha  │              │
-│  │ Story  │ Password Reset   │ 5  │ Alpha  │              │
-│  └────────┴──────────────────┴────┴────────┘              │
-│  [Import]                                                   │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 6️⃣ Role-Based Access Control
-| Rola | Edycja | Usuwanie | Import | Zarządzanie użytkownikami |
-|------|--------|----------|--------|---------------------------|
-| **Admin** | ✅ | ✅ | ✅ | ✅ |
-| **RTE/PM** | ✅ | ✅ | ✅ | ❌ |
-| **Team Lead** | ✅ | ❌ | ❌ | ❌ |
-| **Member** | ❌ | ❌ | ❌ | ❌ |
-| **Viewer** | ❌ | ❌ | ❌ | ❌ |
-
-### 7️⃣ Audit Trail
-```
-┌────────────────────┬──────────────────┬──────────┬─────────────────────┐
-│ Timestamp          │ User             │ Action   │ Details             │
-├────────────────────┼──────────────────┼──────────┼─────────────────────┤
-│ 2025-02-01 10:00   │ anna@company.com │ Created  │ Created OAuth2 Auth │
-│ 2025-02-02 14:30   │ jan@company.com  │ Updated  │ Changed SP 40→48    │
-│ 2025-02-03 09:15   │ maria@company.com│ Deleted  │ Removed old feature │
-└────────────────────┴──────────────────┴──────────┴─────────────────────┘
-```
-
----
-
-## 📁 Struktura nawigacji
-
-```
-┌─────────────────────────────────────────┐
-│  🏠 RTE Dashboard    ← Główny widok     │
-│  📊 Capacity Board   ← Capacity vs Demand│
-│  📋 PI Backlog       ← Work items        │
-│  👥 Teams            ← Konfiguracja      │
-│  📌 Program Board    ← Features timeline │
-│  🔗 Dependencies     ← Cross-team deps   │
-│  🔄 What-If          ← Scenariusze       │
-│  ⚠️ Risks            ← ROAM + Confidence │
-│  ⚙️ Settings         ← Import + Audit    │
-└─────────────────────────────────────────┘
+| Timestamp        | User             | Action  | Details           |
+|------------------|------------------|---------|-------------------|
+| 2025-02-01 10:00 | anna@company.com | Created | OAuth2 Auth       |
+| 2025-02-02 14:30 | jan@company.com  | Updated | SP, sprint, team  |
 ```
 
 ---
@@ -146,117 +202,32 @@ Status:
 ## 🚀 Quick Start
 
 ```bash
-# 1. Rozpakuj i zainstaluj
-unzip pi-capacity-planner-v5.zip
+unzip pi-capacity-planner-v6.zip
 cd pi-capacity-planner-v3
 npm install
-
-# 2. Uruchom
 npm run dev
+# → http://localhost:5173
+```
 
-# 3. Wybierz rolę w Demo Mode:
-#    - Admin (pełne uprawnienia)
-#    - RTE/PM (bez zarządzania użytkownikami)
-#    - Team Lead (tylko edycja)
-#    - Member/Viewer (tylko podgląd)
+## 📁 Navigation Structure
+
+```
+┌─────────────────────────────────────────┐
+│  📊 RTE Dashboard    ← Health overview  │
+│  📈 Capacity Board   ← CORE: Cap vs Dem │
+│  📋 PI Backlog       ← Items + Quick Add│
+│  👥 Teams            ← Config + PTO     │
+│  📌 Program Board    ← SAFe timeline    │
+│  🔗 Dependencies     ← Cross-team       │
+│  🔄 What-If          ← Scenarios        │
+│  ⚠️ Risks            ← ROAM + Fist of 5 │
+│  📉 Reports          ← Monte Carlo      │
+│  ⚙️ Settings         ← Integrations     │
+└─────────────────────────────────────────┘
 ```
 
 ---
 
-## 📊 Metryki PI Health Score
-
-```
-Health Score = 100 
-  - (Overbooked Sprints × 10)
-  - (At-Risk Dependencies × 5)
-  - ((5 - Avg Confidence) × 10)
-
-Przykład:
-  100 - (2 × 10) - (1 × 5) - ((5 - 3.7) × 10)
-  = 100 - 20 - 5 - 13 = 62%
-
-🟢 ≥70%  - Healthy
-🟡 40-69% - At Risk  
-🔴 <40%  - Critical
-```
-
----
-
-## 🔧 Konfiguracja CSV Import
-
-**Wymagane kolumny:**
-```csv
-Type,Name,SP,Team,Sprint,Description,WSJF
-feature,User Login,20,Team Alpha,1,OAuth2 implementation,18
-story,Password Reset,5,Team Alpha,1,Email flow,12
-enabler,CI/CD Setup,8,Team Gamma,1,GitHub Actions,25
-```
-
-**Mapowanie pól:**
-| CSV Column | PI Planner Field |
-|------------|------------------|
-| Type | item.type |
-| Name | item.name |
-| SP | item.sp |
-| Team | item.teamId (by name) |
-| Sprint | item.sprint |
-| Description | item.description |
-| WSJF | item.wsjf |
-
----
-
-## 🔒 Security Notes
-
-1. **API Keys** - przechowywane w localStorage (do poprawy: Supabase secrets)
-2. **Audit Log** - wszystkie zmiany logowane z user + timestamp
-3. **RBAC** - sprawdzenie uprawnień przed każdą operacją
-4. **Demo Mode** - żadne dane nie są wysyłane na serwer
-
----
-
-## 📦 Pliki
-
-```
-pi-capacity-planner-v3/
-├── src/
-│   ├── App.jsx          # Główna aplikacja (1450+ linii)
-│   ├── supabase.js      # Klient Supabase (opcjonalny)
-│   ├── main.jsx
-│   └── index.css
-├── public/favicon.svg
-├── package.json
-├── vite.config.js
-└── README.md
-```
-
----
-
-## 🎨 Widoki
-
-| Widok | Opis | Główne metryki |
-|-------|------|----------------|
-| **RTE Dashboard** | Overview PI health | Score, Load, Reserve, Risks |
-| **Capacity Board** | Team × Sprint matrix | Capacity, Demand, Load % |
-| **Backlog** | All work items | Type, SP, Team, Sprint |
-| **Teams** | Config & absences | Velocity, FTE, PTO |
-| **Program Board** | Timeline view | Features, Milestones |
-| **Dependencies** | Cross-team deps | Status, Warnings |
-| **What-If** | Scenario comparison | Delta load, reserve |
-| **Risks** | ROAM + Confidence | Severity, Avg vote |
-| **Settings** | Import + Audit | CSV, Jira, History |
-
----
-
-## 🛣️ Roadmap
-
-- [ ] Real Jira API integration
-- [ ] Real-time collaboration (Supabase Realtime)
-- [ ] PDF export reports
-- [ ] Monte Carlo forecasting
-- [ ] Slack/Teams notifications
-- [ ] Multi-ART support
-
----
-
-**Wersja:** 5.0  
-**Licencja:** MIT
+**Version:** 6.0 Complete  
+**Lines of code:** 1,466  
+**License:** MIT

@@ -1451,3 +1451,16 @@ export default function App() {
     </AppContext.Provider>
   );
 }
+ gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${view === item.id ? 'bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 text-cyan-300' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}>
+                  <Icon name={item.icon} className="w-5 h-5" /><span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </nav>
+          <main className="flex-1 p-6 min-h-[calc(100vh-80px)]"><ViewComponent /></main>
+        </div>
+        {selectedItem && <ItemDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />}
+      </div>
+    </AppContext.Provider>
+  );
+}
