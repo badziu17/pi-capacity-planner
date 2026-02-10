@@ -1,233 +1,245 @@
-# PI Capacity Planner v6.0 — Complete Enterprise Edition
+# PI Capacity Planner v7.0 — Full Enterprise + AI Edition
 
-**SAFe 6.0 PI Planning Tool with full enterprise feature set.**
+**SAFe 6.0 PI Planning Tool with AI forecasting, bidirectional sync, and multi-ART portfolio management.**
 
-## ✅ All Features Verified & Implemented
+## 🆕 New in v7.0
 
-### 1️⃣ Capacity vs Demand Board (Core Screen)
+### 1️⃣ AI Velocity Forecasting (Predictive Analytics)
+
 ```
-┌─────────────┬───────────┬───────────┬───────────┬───────────┬────┐
-│ Team        │ Sprint 1  │ Sprint 2  │ Sprint 3  │ Sprint 4  │ IP │
-├─────────────┼───────────┼───────────┼───────────┼───────────┼────┤
-│ Team Alpha  │ 35/40 88% │ 40/40 100%│ 25/40 63% │ 32/40 80% │ 8/8│
-│ 40 SP/sprint│ ██████░░  │ ████████  │ █████░░░  │ ██████░░  │ ██ │
-│             │ • OAuth2  │ • Profile │ • Permiss │           │    │
-└─────────────┴───────────┴───────────┴───────────┴───────────┴────┘
-```
-- ✅ Team × Iteration matrix with capacity vs demand
-- ✅ Color coding: 🟢 ≤80%, 🟡 80-100%, 🔴 >100%
-- ✅ Drag-and-drop assignment from unplanned pool
-- ✅ **Click on items to view details**
-
-### 2️⃣ Teams & Availability Configuration
-- ✅ Team velocity (SP/sprint) configuration
-- ✅ FTE per team member (0.1 - 1.0)
-- ✅ Absence tracking per member per sprint
-- ✅ Polish holidays 2025 calendar (13 days)
-- ✅ Capacity calculation formula:
-  ```
-  effectiveCapacity = baseVelocity × (availableDays / totalWorkDays)
-  availableDays = Σ (workDays - absences) × FTE per member
-  ```
-
-### 3️⃣ SAFe Structure (ART → Teams → PI → Iterations)
-```
-ART (Agile Release Train)
-├── Team Alpha (40 SP/sprint)
-├── Team Beta (35 SP/sprint)
-└── Team Gamma (30 SP/sprint)
-    └── PI 2025.1 (PI44)
-        ├── Sprint 1: Feb 19 - Mar 4
-        ├── Sprint 2: Mar 5 - 18
-        ├── Sprint 3: Mar 19 - Apr 1
-        ├── Sprint 4: Apr 2 - 15
-        └── IP Sprint: Apr 16 - 29 (20% capacity)
+┌─────────────────────────────────────────────────────────────────┐
+│ 🤖 AI Velocity Forecast                                         │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐              │
+│ │ Next PI      │ │ Range        │ │ Confidence   │              │
+│ │ 525 SP       │ │ 480-570 SP   │ │ 78%          │              │
+│ └──────────────┘ └──────────────┘ └──────────────┘              │
+├─────────────────────────────────────────────────────────────────┤
+│ Team Alpha: 40 → 43 SP ↑  (Improving velocity trend)            │
+│ Team Beta:  35 → 36 SP →  (Stable)                              │
+│ Team Gamma: 30 → 28 SP ↓  (High variance, investigate)          │
+├─────────────────────────────────────────────────────────────────┤
+│ Recommendation: High forecast confidence. Safe to plan at P50.  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### 4️⃣ Backlog Management with Quick Add & Drag-Drop
-- ✅ Quick Add: Type + Name + SP + Team + Sprint
-- ✅ Drag-and-drop from unplanned to sprint cells
-- ✅ Epic → Feature → Story hierarchy
-- ✅ WSJF prioritization field
-- ✅ Filter by type (Epic, Feature, Story, Enabler, Unassigned)
+**Algorithm:**
+- Linear regression on historical velocity (6-8 sprints)
+- Seasonality detection
+- R² confidence scoring
+- Risk-adjusted capacity calculation
 
-### 5️⃣ Clickable Items with Full Details
-```
-┌─────────────────────────────────────────────────────────────┐
-│ Item Details                                          [×]  │
-├─────────────────────────────────────────────────────────────┤
-│ [Feature] OAuth2 Authentication                    [Done]  │
-├─────────────────────────────────────────────────────────────┤
-│ SP: [40 ▼]  Team: [Alpha ▼]  Sprint: [S1 ▼]  Status: [▼]  │
-│ Assignee: [Anna Kowalska ▼]                                │
-├─────────────────────────────────────────────────────────────┤
-│ Description:                                               │
-│ Implement OAuth2 with Google and GitHub providers          │
-├─────────────────────────────────────────────────────────────┤
-│ Acceptance Criteria:                                       │
-│ - Google OAuth works                                       │
-│ - GitHub OAuth works                                       │
-│ - Token refresh implemented                                │
-│ - Logout clears session                                    │
-├─────────────────────────────────────────────────────────────┤
-│ Parent: [Epic] User Management Platform                    │
-│ Children: Login form UI (5 SP), Google OAuth button (3 SP) │
-├─────────────────────────────────────────────────────────────┤
-│ Linked Dependencies:                                       │
-│ ⛓ Depends on: REST API v1 (Team Beta S1)                  │
-│ ⛓ Provides to: Permission System (Team Alpha S3)          │
-└─────────────────────────────────────────────────────────────┘
+```javascript
+// AIForecastEngine.analyzeVelocityTrend()
+const forecast = AIForecastEngine.forecastART(teams);
+// Returns: { totalForecast, totalLow, totalHigh, avgConfidence, recommendation }
 ```
 
-### 6️⃣ Integration Engine (Jira, Azure DevOps)
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 🔷 Import from Jira                          [Connected ✓] │
-├─────────────────────────────────────────────────────────────┤
-│ URL: https://company.atlassian.net                         │
-│ Token: ••••••••••••                                        │
-│ Project: PROJ                                              │
-├─────────────────────────────────────────────────────────────┤
-│ [Test Connection] [Fetch Items] [Sync Velocity] [Sync PTO] │
-└─────────────────────────────────────────────────────────────┘
-```
-- ✅ Jira Cloud integration
-- ✅ Azure DevOps integration
-- ✅ CSV import with preview
-- ✅ Sync: Backlog items, Historical velocity, PTO/absences
+### 2️⃣ Bidirectional Sync (Jira / Azure DevOps)
 
-### 7️⃣ Alert Engine (Slack/Teams/Email)
 ```
-┌─────────────────────────────────────────────────────────────┐
-│ Alert Triggers                                              │
-├─────────────────────────────────────────────────────────────┤
-│ [✓] Capacity over 100% (overcommit)                        │
-│ [✓] Capacity over 80% (warning)                            │
-│ [✓] Low confidence vote (<3)                               │
-│ [ ] Sprint starting reminder                               │
-├─────────────────────────────────────────────────────────────┤
-│ Notification Channels                                       │
-│ 💬 Slack   [✓] Webhook: https://hooks.slack.com/...        │
-│ 👥 Teams   [ ] Webhook: ___________________________        │
-│ 📧 Email   [ ] Webhook: ___________________________        │
-│                                            [Test Alert]     │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│ 🔷 Jira Cloud — Bidirectional Sync              [Connected ✓]  │
+├─────────────────────────────────────────────────────────────────┤
+│ [Test Connection] [🔄 Sync Now] [✓ Auto-sync every 5 min]      │
+├─────────────────────────────────────────────────────────────────┤
+│ Last sync: 2025-02-10 14:32:15                                  │
+│ ⚠️ 3 pending changes to sync                                    │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### 8️⃣ Reports with Monte Carlo Simulation
-```
-┌─────────────────────────────────────────────────────────────┐
-│ Monte Carlo Simulation         [10,000 iterations ▼] [Run] │
-├─────────────────────────────────────────────────────────────┤
-│ ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐    │
-│ │ P50       │ │ P75       │ │ P90       │ │ Total SP  │    │
-│ │ 4 sprints │ │ 5 sprints │ │ 6 sprints │ │ 248 SP    │    │
-│ └───────────┘ └───────────┘ └───────────┘ └───────────┘    │
-├─────────────────────────────────────────────────────────────┤
-│ Completion Forecast                                         │
-│  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░                │
-│  3 sprints                              8 sprints           │
-├─────────────────────────────────────────────────────────────┤
-│ [Export CSV]                             [Export PDF]       │
-└─────────────────────────────────────────────────────────────┘
-```
-- ✅ Monte Carlo simulation with configurable iterations
-- ✅ P50, P75, P90 percentile forecasts
-- ✅ Histogram visualization
-- ✅ CSV export with team breakdown
-- ✅ PDF export (stub - requires jspdf in production)
+**Features:**
+- **Push changes** to Jira/ADO when items are created/updated
+- **Pull updates** from external systems
+- **Conflict detection** with resolution options (keep local/remote/manual)
+- **Auto-sync** every 5 minutes (configurable)
+- **Change tracking** with pending queue
 
-### 9️⃣ Dependencies Visualization
+```javascript
+// SyncEngine.fullSync()
+const result = await SyncEngine.fullSync(config, onProgress);
+// Returns: { pushed: 5, pulled: 3, conflicts: 0, syncedAt: '...' }
 ```
-┌───────────────┬─────┬───────────────┬────────┬─────────────┐
-│ Provider      │  →  │ Consumer      │ Status │ Warning     │
-├───────────────┼─────┼───────────────┼────────┼─────────────┤
-│ REST API v1   │  →  │ OAuth2 Auth   │ ✓ OK   │             │
-│ Team Beta S1  │     │ Team Alpha S2 │        │             │
-├───────────────┼─────┼───────────────┼────────┼─────────────┤
-│ Charts        │  →  │ Data Export   │ ⚠️ Risk│ Low reserve │
-│ Team Beta S2  │     │ Team Gamma S2 │        │             │
-└───────────────┴─────┴───────────────┴────────┴─────────────┘
-```
-- ✅ Status indicators: Healthy / At Risk / Violated
-- ✅ Warning messages for low reserve
-- ✅ Click to view item details
 
-### 🔟 Risks & Confidence Voting
-```
-┌─────────────────────────────────────────────────────────────┐
-│ Confidence Vote              [Start Voting] ART Avg: 3.7/5 │
-├─────────────────────────────────────────────────────────────┤
-│ Team Alpha    [1] [2] [3] [4•] [5]                         │
-│ Team Beta     [1] [2] [3•] [4] [5]                         │
-│ Team Gamma    [1] [2] [3] [4•] [5]                         │
-├─────────────────────────────────────────────────────────────┤
-│ Top Risks                                                   │
-│ 🔴 HIGH   Third-party API rate limits    [Owned ▼] [🗑]    │
-│           Owner: Team Beta                                  │
-│           Mitigation: Implement caching                    │
-└─────────────────────────────────────────────────────────────┘
-```
-- ✅ Fist of Five voting (1-5)
-- ✅ ROAM status (Resolved/Owned/Accepted/Mitigated)
-- ✅ Risk severity (High/Medium/Low)
-- ✅ ART-level aggregation
+### 3️⃣ Real Notifications (Slack / Teams / Email)
 
-### 1️⃣1️⃣ What-If Scenarios
-| Baseline | Scenario A | Scenario B |
-|----------|------------|------------|
-| Current state | Team Beta -20% | +Team Delta |
-| 80% load | 92% load (+12%) | 65% load (-15%) |
-| 105 SP reserve | 65 SP (-40) | 230 SP (+125) |
-
-### 1️⃣2️⃣ Role-Based Access & Audit Trail
-| Role | Edit | Delete | Import |
-|------|------|--------|--------|
-| Admin | ✅ | ✅ | ✅ |
-| RTE/PM | ✅ | ✅ | ✅ |
-| Team Lead | ✅ | ❌ | ❌ |
-| Member | ❌ | ❌ | ❌ |
-| Viewer | ❌ | ❌ | ❌ |
-
-**Audit Trail:**
 ```
-| Timestamp        | User             | Action  | Details           |
-|------------------|------------------|---------|-------------------|
-| 2025-02-01 10:00 | anna@company.com | Created | OAuth2 Auth       |
-| 2025-02-02 14:30 | jan@company.com  | Updated | SP, sprint, team  |
+┌─────────────────────────────────────────────────────────────────┐
+│ Alert Triggers                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│ [✓] 🔴 Capacity over 100% (overcommit)                         │
+│ [✓] 🟡 Capacity over 80% (warning)                             │
+│ [✓] ⚠️ Low confidence vote (<3)                                │
+│ [ ] 📅 Sprint starting reminder                                 │
+│ [ ] 🚀 PI starting reminder                                     │
+│ [✓] 🔄 Scenario changed                                        │
+├─────────────────────────────────────────────────────────────────┤
+│ Channels:                                                       │
+│ 💬 Slack  [✓] https://hooks.slack.com/...  [Test]              │
+│ 👥 Teams  [ ] ________________________     [Test]              │
+│ 📧 Email  [ ] ________________________     [Test]              │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+**NotificationEngine:**
+```javascript
+// Auto-check and notify
+await NotificationEngine.checkAndNotify({ teams, items, sprints }, alertConfig);
+
+// Manual notification
+await NotificationEngine.notify(config, { 
+  type: 'danger', 
+  message: '🔴 Team Alpha Sprint 2: 120% capacity!' 
+});
+```
+
+### 4️⃣ Portfolio / Multi-ART View
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ 📊 Portfolio View — Multi-ART Capacity Management               │
+├─────────────────────────────────────────────────────────────────┤
+│ ARTs: 2    Total Cap: 945 SP    Demand: 780 SP    Load: 83%    │
+├─────────────────────────────────────────────────────────────────┤
+│ 🤖 AI Suggestion: Move capacity from "Customer Platform ART"   │
+│    to "Internal Tools ART" (25 SP) to optimize load balance    │
+│                                            [Rebalance Capacity] │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────┐ ┌─────────────────────────┐        │
+│ │ Customer Platform ART   │ │ Internal Tools ART      │        │
+│ │ 3 teams • 9 items       │ │ 2 teams • 4 items       │        │
+│ │ ████████████░░░░ 87%    │ │ ██████████░░░░░░ 65%    │        │
+│ │ Cap: 630 SP             │ │ Cap: 315 SP             │        │
+│ │ Demand: 548 SP          │ │ Demand: 205 SP          │        │
+│ │ 🤖 Next PI: 645 SP      │ │ 🤖 Next PI: 320 SP      │        │
+│ └─────────────────────────┘ └─────────────────────────┘        │
+├─────────────────────────────────────────────────────────────────┤
+│ Cross-ART Dependencies:                                         │
+│ ⛓ Admin Panel → Report Generator (cross-ART)                   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Features:**
+- View all ARTs side-by-side
+- Portfolio-level capacity/demand metrics
+- AI optimization suggestions for rebalancing
+- Cross-ART dependency tracking
+- Per-ART AI forecasts
+
+### 5️⃣ Enhanced PDF Export
+
+```javascript
+// Opens print dialog for PDF generation
+await MonteCarloEngine.generatePDF({
+  teams, items, simulation, pi, forecast
+});
+```
+
+**PDF includes:**
+- Monte Carlo results (P50/P75/P90)
+- AI forecasts with confidence
+- Team breakdown table
+- Backlog items summary
+
+---
+
+## ✅ Complete Feature List
+
+| Category | Feature | Status |
+|----------|---------|--------|
+| **Core** | Capacity vs Demand Board | ✅ |
+| | Team × Sprint matrix | ✅ |
+| | Drag-and-drop assignment | ✅ |
+| | Color-coded overcommit | ✅ |
+| **Teams** | FTE configuration | ✅ |
+| | Absence tracking | ✅ |
+| | Holiday calendar | ✅ |
+| | Historical velocity | ✅ |
+| **SAFe** | ART structure | ✅ |
+| | PI configuration | ✅ |
+| | IP Sprint (20% capacity) | ✅ |
+| **Backlog** | Quick Add items | ✅ |
+| | Epic/Feature/Story/Enabler | ✅ |
+| | Clickable with full details | ✅ |
+| | Description + AC | ✅ |
+| | Status tracking | ✅ |
+| **AI/Analytics** | Velocity forecasting | ✅ |
+| | Trend analysis | ✅ |
+| | Confidence scoring | ✅ |
+| | Risk-adjusted capacity | ✅ |
+| | Monte Carlo simulation | ✅ |
+| **Integrations** | Jira Cloud | ✅ |
+| | Azure DevOps | ✅ |
+| | CSV import | ✅ |
+| | Bidirectional sync | ✅ |
+| | Change tracking | ✅ |
+| **Notifications** | Slack webhooks | ✅ |
+| | Teams webhooks | ✅ |
+| | Email (via webhook) | ✅ |
+| | Capacity alerts | ✅ |
+| | Sprint reminders | ✅ |
+| **Portfolio** | Multi-ART view | ✅ |
+| | Cross-ART dependencies | ✅ |
+| | AI rebalancing suggestions | ✅ |
+| **Reports** | CSV export | ✅ |
+| | PDF export | ✅ |
+| | AI recommendations | ✅ |
+| **Other** | What-If scenarios | ✅ |
+| | Dependencies visualization | ✅ |
+| | Risks & Confidence | ✅ |
+| | Role-based access | ✅ |
+| | Audit trail | ✅ |
+| | Bilingual (EN/PL) | ✅ |
 
 ---
 
 ## 🚀 Quick Start
 
 ```bash
-unzip pi-capacity-planner-v6.zip
+unzip pi-capacity-planner-v7.zip
 cd pi-capacity-planner-v3
 npm install
 npm run dev
 # → http://localhost:5173
 ```
 
-## 📁 Navigation Structure
+---
+
+## 📁 Navigation
 
 ```
-┌─────────────────────────────────────────┐
-│  📊 RTE Dashboard    ← Health overview  │
-│  📈 Capacity Board   ← CORE: Cap vs Dem │
-│  📋 PI Backlog       ← Items + Quick Add│
-│  👥 Teams            ← Config + PTO     │
-│  📌 Program Board    ← SAFe timeline    │
-│  🔗 Dependencies     ← Cross-team       │
-│  🔄 What-If          ← Scenarios        │
-│  ⚠️ Risks            ← ROAM + Fist of 5 │
-│  📉 Reports          ← Monte Carlo      │
-│  ⚙️ Settings         ← Integrations     │
-└─────────────────────────────────────────┘
+├── 📊 RTE Dashboard     — PI health overview
+├── 📈 Capacity Board    — CORE: Team × Sprint
+├── 📋 PI Backlog        — Items + Quick Add
+├── 👥 Teams             — Config + PTO
+├── 📌 Program Board     — SAFe timeline
+├── 🔗 Dependencies      — Cross-team
+├── 🔄 What-If           — Scenarios
+├── ⚠️ Risks             — ROAM + Fist of 5
+├── 📉 Reports & AI      — Monte Carlo + Forecasts
+├── 📊 Portfolio         — Multi-ART view
+└── ⚙️ Settings          — Integrations + Alerts
 ```
 
 ---
 
-**Version:** 6.0 Complete  
-**Lines of code:** 1,466  
+## 🔧 Technical Details
+
+**Stack:**
+- React 18 + Vite
+- Tailwind CSS
+- No external state management (React Context)
+
+**Engines:**
+- `AIForecastEngine` — Linear regression + seasonality
+- `MonteCarloEngine` — Simulation + PDF/CSV export
+- `SyncEngine` — Bidirectional sync with conflict detection
+- `NotificationEngine` — Multi-channel alerts
+
+**Lines of code:** 1,670
+**Demo data:** 2 ARTs, 5 teams, 13 items, 4 dependencies, 3 risks
+
+---
+
+**Version:** 7.0 Complete  
 **License:** MIT

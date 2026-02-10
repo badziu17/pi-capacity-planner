@@ -1464,3 +1464,207 @@ export default function App() {
     </AppContext.Provider>
   );
 }
+full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white"><option value="">Select...</option>{features.filter(f => f.teamId && f.sprint).map(f => <option key={f.id} value={f.id}>{f.name} ({teams.find(t => t.id === f.teamId)?.name} S{f.sprint})</option>)}</select></div><div><label className="block text-xs text-slate-400 mb-1">{t.deps.consumer}</label><select value={newDep.toId} onChange={e => setNewDep({ ...newDep, toId: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white"><option value="">Select...</option>{features.filter(f => f.teamId && f.sprint).map(f => <option key={f.id} value={f.id}>{f.name} ({teams.find(t => t.id === f.teamId)?.name} S{f.sprint})</option>)}</select></div><div><label className="block text-xs text-slate-400 mb-1">Description</label><input type="text" value={newDep.description} onChange={e => setNewDep({ ...newDep, description: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white" /></div><div className="flex justify-end gap-3 pt-4"><button onClick={() => setShowAdd(false)} className="px-4 py-2 text-slate-400">{t.c.cancel}</button><button onClick={() => { if (newDep.fromId && newDep.toId) { addDependency({ ...newDep, id: uid() }); setNewDep({ fromId: '', toId: '', description: '' }); setShowAdd(false); } }} className="px-6 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-emerald-500 text-white">{t.c.add}</button></div></div></Modal></div>
+  );
+};
+
+const RTEDashboard = () => {
+  const { t, teams, items, sprints, dependencies, risks, alertConfig } = useApp();
+  const stats = useMemo(() => {
+    let totalCap = 0, totalDemand = 0, overbookedCount = 0;
+    const teamStats = [];
+    teams.forEach(team => {
+      let teamCap = 0, teamDemand = 0, teamOverbooked = 0;
+      sprints.forEach((sprint, idx) => {
+        const cap = sprint.isIP ? team.velocity * 0.2 : team.velocity;
+        const demand = items.filter(i => i.teamId === team.id && i.sprint === idx + 1).reduce((s, i) => s + (i.sp || 0), 0);
+        teamCap += cap; teamDemand += demand;
+        if (demand > cap) { teamOverbooked++; overbookedCount++; }
+      });
+      teamStats.push({ ...team, capacity: teamCap, demand: teamDemand, load: teamCap > 0 ? teamDemand / teamCap : 0, overbooked: teamOverbooked });
+      totalCap += teamCap; totalDemand += teamDemand;
+    });
+    const avgLoad = totalCap > 0 ? totalDemand / totalCap : 0;
+    const avgConfidence = teams.reduce((s, t) => s + (t.confidence || 3), 0) / teams.length;
+    const atRiskDeps = dependencies.filter(d => { const from = items.find(i => i.id === d.fromId); const to = items.find(i => i.id === d.toId); return from?.sprint >= to?.sprint; }).length;
+    const healthScore = Math.max(0, 100 - (overbookedCount * 10) - (atRiskDeps * 5) - ((5 - avgConfidence) * 10));
+    return { totalCap, totalDemand, avgLoad, reserve: totalCap - totalDemand, overbookedCount, teamStats, avgConfidence, healthScore, atRiskDeps };
+  }, [teams, items, sprints, dependencies]);
+
+  // Check for alerts
+  const alerts = useMemo(() => {
+    const notifs = [];
+    stats.teamStats.forEach(team => {
+      if (alertConfig.capacityOver && team.load > 1) notifs.push({ type: 'danger', title: `🔴 ${team.name}: Overcommit!`, message: `${(team.load * 100).toFixed(0)}% load` });
+      else if (alertConfig.capacityWarn && team.load > 0.8) notifs.push({ type: 'warning', title: `🟡 ${team.name}: High load`, message: `${(team.load * 100).toFixed(0)}% load` });
+    });
+    if (alertConfig.lowConfidence && stats.avgConfidence < 3) notifs.push({ type: 'warning', title: '⚠️ Low confidence', message: `ART avg: ${stats.avgConfidence.toFixed(1)}/5` });
+    return notifs;
+  }, [stats, alertConfig]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div><h2 className="text-2xl font-bold text-white">{t.dash.title}</h2><p className="text-slate-400">{t.dash.subtitle}</p></div>
+        <div className={`px-6 py-3 rounded-2xl ${stats.healthScore >= 70 ? 'bg-emerald-500/20 border-emerald-500/50' : stats.healthScore >= 40 ? 'bg-amber-500/20 border-amber-500/50' : 'bg-red-500/20 border-red-500/50'} border`}>
+          <p className="text-xs opacity-70">{t.dash.healthScore}</p>
+          <p className={`text-3xl font-bold ${stats.healthScore >= 70 ? 'text-emerald-400' : stats.healthScore >= 40 ? 'text-amber-400' : 'text-red-400'}`}>{stats.healthScore.toFixed(0)}%</p>
+        </div>
+      </div>
+
+      {alerts.length > 0 && (
+        <div className="space-y-2">
+          {alerts.slice(0, 3).map((alert, i) => (
+            <div key={i} className={`p-3 rounded-lg flex items-center gap-3 ${alert.type === 'danger' ? 'bg-red-500/20 border border-red-500/50' : 'bg-amber-500/20 border border-amber-500/50'}`}>
+              <div><p className={`font-medium ${alert.type === 'danger' ? 'text-red-400' : 'text-amber-400'}`}>{alert.title}</p><p className="text-sm text-slate-300">{alert.message}</p></div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <Stat label={t.dash.totalCapacity} value={`${stats.totalCap} SP`} color="cyan" />
+        <Stat label={t.dash.totalDemand} value={`${stats.totalDemand} SP`} color="purple" />
+        <Stat label={t.dash.avgLoad} value={`${(stats.avgLoad * 100).toFixed(0)}%`} color={stats.avgLoad > 1 ? 'red' : stats.avgLoad > 0.8 ? 'amber' : 'emerald'} />
+        <Stat label={t.dash.reserve} value={`${stats.reserve} SP`} color={stats.reserve < 0 ? 'red' : 'emerald'} />
+        <Stat label={t.dash.overbooked} value={stats.overbookedCount} color={stats.overbookedCount > 0 ? 'red' : 'emerald'} />
+        <Stat label={t.risks.avgConfidence} value={`${stats.avgConfidence.toFixed(1)}/5`} color={stats.avgConfidence >= 3.5 ? 'emerald' : 'amber'} />
+      </div>
+
+      <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
+        <h3 className="font-semibold text-white mb-4">{t.dash.teamBreakdown}</h3>
+        <div className="space-y-4">
+          {stats.teamStats.map(team => {
+            const color = getLoadColor(team.load);
+            return (
+              <div key={team.id} className="flex items-center gap-4">
+                <div className="w-28 flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: team.color }} /><span className="text-white text-sm">{team.name}</span></div>
+                <div className="flex-1">
+                  <div className="h-6 bg-slate-800 rounded-full overflow-hidden relative">
+                    <div className="h-full rounded-full" style={{ width: `${Math.min(team.load * 100, 100)}%`, backgroundColor: color.fill }} />
+                    <div className="absolute inset-0 flex items-center justify-between px-3">
+                      <span className="text-xs text-white">{team.demand}/{team.capacity} SP</span>
+                      <span className={`text-xs font-bold ${color.text}`}>{(team.load * 100).toFixed(0)}%</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="w-24">{team.overbooked > 0 ? <Badge variant="danger">{team.overbooked} over</Badge> : <Badge variant="success">{t.dash.onTrack}</Badge>}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============ MAIN APP ============
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [userRole, setUserRole] = useState('rte');
+  const [isDemo, setIsDemo] = useState(false);
+  const [lang, setLang] = useState('pl');
+  const [view, setView] = useState('dashboard');
+  const [pi, setPi] = useState('PI44');
+  const [arts, setArts] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [items, setItems] = useState([]);
+  const [dependencies, setDependencies] = useState([]);
+  const [risks, setRisks] = useState([]);
+  const [absences, setAbsences] = useState({});
+  const [milestones, setMilestones] = useState([]);
+  const [auditLog, setAuditLog] = useState([]);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [alertConfig, setAlertConfig] = useState({ capacityOver: true, capacityWarn: true, lowConfidence: true, sprintStart: false, piStart: false, channels: {}, webhooks: {} });
+  const [integrationConfig, setIntegrationConfig] = useState({ jira: {}, azure: {} });
+  
+  const t = T[lang];
+  const sprints = useMemo(() => calculateSprints(PI_CONFIG[pi]), [pi]);
+
+  const handleDemo = (role, selectedLang) => {
+    const demo = createDemoData();
+    setArts(demo.arts);
+    setTeams(demo.teams);
+    setItems(demo.items);
+    setDependencies(demo.dependencies);
+    setRisks(demo.risks);
+    setAbsences(demo.absences);
+    setMilestones(demo.milestones);
+    setAuditLog(demo.auditLog);
+    setUserRole(role);
+    setLang(selectedLang);
+    setIsDemo(true);
+    setUser({ email: 'demo@pi-planner.app', role });
+  };
+
+  const addAuditEntry = (action, entity, entityId, details) => setAuditLog(prev => [{ id: uid(), user: user?.email || 'system', action, entity, entityId, timestamp: new Date().toISOString(), details }, ...prev]);
+  const updateTeam = (id, upd) => { setTeams(prev => prev.map(t => t.id === id ? { ...t, ...upd } : t)); addAuditEntry('updated', 'Team', id, Object.keys(upd).join(', ')); };
+  const addTeam = (team) => { setTeams(prev => [...prev, team]); addAuditEntry('created', 'Team', team.id, team.name); };
+  const deleteTeam = (id) => { setTeams(prev => prev.filter(t => t.id !== id)); addAuditEntry('deleted', 'Team', id, ''); };
+  const updateItem = (id, upd) => { setItems(prev => prev.map(i => i.id === id ? { ...i, ...upd } : i)); addAuditEntry('updated', 'Item', id, Object.keys(upd).join(', ')); };
+  const addItem = (item) => { setItems(prev => [...prev, item]); addAuditEntry('created', 'Item', item.id, item.name); };
+  const deleteItem = (id) => { setItems(prev => prev.filter(i => i.id !== id)); addAuditEntry('deleted', 'Item', id, ''); };
+  const addDependency = (dep) => { setDependencies(prev => [...prev, dep]); addAuditEntry('created', 'Dependency', dep.id, ''); };
+  const deleteDependency = (id) => { setDependencies(prev => prev.filter(d => d.id !== id)); addAuditEntry('deleted', 'Dependency', id, ''); };
+  const addRisk = (risk) => { setRisks(prev => [...prev, risk]); addAuditEntry('created', 'Risk', risk.id, risk.name); };
+  const updateRisk = (id, upd) => { setRisks(prev => prev.map(r => r.id === id ? { ...r, ...upd } : r)); };
+  const deleteRisk = (id) => { setRisks(prev => prev.filter(r => r.id !== id)); addAuditEntry('deleted', 'Risk', id, ''); };
+  const updateAbsence = (teamId, memberId, sprint, days) => setAbsences(prev => ({ ...prev, [`${teamId}-${memberId}-${sprint}`]: days }));
+
+  const ctx = { t, lang, setLang, arts, teams, setTeams, items, sprints, absences, milestones, dependencies, risks, auditLog, pi, setPi, userRole, user, isDemo, selectedItem, setSelectedItem, alertConfig, setAlertConfig, integrationConfig, setIntegrationConfig, updateTeam, addTeam, deleteTeam, updateItem, addItem, deleteItem, addDependency, deleteDependency, addRisk, updateRisk, deleteRisk, updateAbsence, addAuditEntry };
+
+  if (!user && !isDemo) return <AuthScreen onDemo={handleDemo} />;
+
+  const navItems = [
+    { id: 'dashboard', icon: 'dashboard', label: t.nav.dashboard },
+    { id: 'capacity', icon: 'capacity', label: t.nav.capacity },
+    { id: 'backlog', icon: 'backlog', label: t.nav.backlog },
+    { id: 'teams', icon: 'teams', label: t.nav.teams },
+    { id: 'program', icon: 'program', label: t.nav.program },
+    { id: 'dependencies', icon: 'link', label: t.deps.title },
+    { id: 'whatif', icon: 'whatif', label: t.nav.whatif },
+    { id: 'risks', icon: 'risks', label: t.nav.risks },
+    { id: 'reports', icon: 'reports', label: t.nav.reports },
+    { id: 'portfolio', icon: 'portfolio', label: t.nav.portfolio },
+    { id: 'settings', icon: 'settings', label: t.nav.settings },
+  ];
+
+  const views = { dashboard: RTEDashboard, capacity: CapacityBoard, backlog: BacklogView, teams: TeamsView, program: ProgramBoard, dependencies: DependenciesView, whatif: WhatIfView, risks: RisksView, reports: ReportsView, portfolio: PortfolioView, settings: SettingsView };
+  const ViewComponent = views[view] || RTEDashboard;
+
+  return (
+    <AppContext.Provider value={ctx}>
+      <div className="min-h-screen bg-slate-950 text-slate-100" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');`}</style>
+        <header className="bg-slate-900/80 backdrop-blur-lg border-b border-slate-800 sticky top-0 z-40">
+          <div className="max-w-[1800px] mx-auto px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-cyan-500/20"><span className="text-xl font-bold text-white">π</span></div>
+              <div><h1 className="text-lg font-semibold text-white">{t.app.title}</h1><p className="text-xs text-slate-400">{t.app.subtitle}</p></div>
+            </div>
+            <div className="flex items-center gap-4">
+              <select value={pi} onChange={e => setPi(e.target.value)} className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm">{Object.entries(PI_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}</select>
+              <div className="flex gap-1 p-1 rounded-lg bg-slate-800"><button onClick={() => setLang('en')} className={`px-2 py-1 rounded text-xs ${lang === 'en' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400'}`}>EN</button><button onClick={() => setLang('pl')} className={`px-2 py-1 rounded text-xs ${lang === 'pl' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400'}`}>PL</button></div>
+              <Badge variant={userRole === 'admin' ? 'danger' : userRole === 'rte' ? 'purple' : 'default'}>{t.auth[userRole]}</Badge>
+              {isDemo && <Badge variant="warning">DEMO</Badge>}
+              <button onClick={() => { setUser(null); setIsDemo(false); }} className="text-sm text-slate-400 hover:text-red-400">{t.auth.signOut}</button>
+            </div>
+          </div>
+        </header>
+        <div className="max-w-[1800px] mx-auto flex">
+          <nav className="w-52 shrink-0 p-4 sticky top-20 h-[calc(100vh-80px)]">
+            <div className="space-y-1">
+              {navItems.map(item => (
+                <button key={item.id} onClick={() => setView(item.id)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${view === item.id ? 'bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 text-cyan-300' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}>
+                  <Icon name={item.icon} className="w-5 h-5" /><span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </nav>
+          <main className="flex-1 p-6 min-h-[calc(100vh-80px)]"><ViewComponent /></main>
+        </div>
+        {selectedItem && <ItemDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />}
+      </div>
+    </AppContext.Provider>
+  );
+}
