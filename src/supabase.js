@@ -1,71 +1,86 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js'
 
-const URL = import.meta.env.VITE_SUPABASE_URL || '';
-const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// ═══ SUPABASE CONFIG ═══
+// Set these in your .env.local file or Vercel environment variables:
+//   VITE_SUPABASE_URL=https://your-project.supabase.co
+//   VITE_SUPABASE_ANON_KEY=your-anon-key
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
-export const supabase = URL && KEY ? createClient(URL, KEY) : null;
-export const isConfigured = () => !!supabase;
+export const isSupabaseConfigured = !!(SUPABASE_URL && SUPABASE_KEY)
 
-export const auth = {
-  signUp: async (email, password, fullName) => {
-    if (!supabase) return { error: { message: 'Supabase not configured' } };
-    return supabase.auth.signUp({ email, password, options: { data: { full_name: fullName } } });
-  },
-  signIn: async (email, password) => {
-    if (!supabase) return { error: { message: 'Supabase not configured' } };
-    return supabase.auth.signInWithPassword({ email, password });
-  },
-  signOut: async () => supabase ? supabase.auth.signOut() : { error: null },
-  getSession: async () => supabase ? supabase.auth.getSession() : { data: { session: null } },
-  onAuthStateChange: (cb) => supabase ? supabase.auth.onAuthStateChange(cb) : { data: { subscription: { unsubscribe: () => {} } } }
-};
+export const supabase = isSupabaseConfigured
+  ? createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { autoRefreshToken: true, persistSession: true },
+      realtime: { params: { eventsPerSecond: 10 } }
+    })
+  : null
 
-export const db = {
-  teams: {
-    getAll: () => supabase?.from('teams').select('*, team_members(*)').order('created_at'),
-    create: (t) => supabase?.from('teams').insert(t).select().single(),
-    update: (id, u) => supabase?.from('teams').update(u).eq('id', id).select().single(),
-    delete: (id) => supabase?.from('teams').delete().eq('id', id)
-  },
-  members: {
-    create: (m) => supabase?.from('team_members').insert(m).select().single(),
-    update: (id, u) => supabase?.from('team_members').update(u).eq('id', id).select().single(),
-    delete: (id) => supabase?.from('team_members').delete().eq('id', id)
-  },
-  features: {
-    getAll: (pi) => supabase?.from('features').select('*').eq('pi_name', pi).order('created_at'),
-    create: (f) => supabase?.from('features').insert(f).select().single(),
-    update: (id, u) => supabase?.from('features').update(u).eq('id', id).select().single(),
-    delete: (id) => supabase?.from('features').delete().eq('id', id)
-  },
-  deps: {
-    getAll: () => supabase?.from('dependencies').select('*').order('created_at'),
-    create: (d) => supabase?.from('dependencies').insert(d).select().single(),
-    delete: (id) => supabase?.from('dependencies').delete().eq('id', id)
-  },
-  objectives: {
-    getAll: (pi) => supabase?.from('objectives').select('*').eq('pi_name', pi).order('created_at'),
-    create: (o) => supabase?.from('objectives').insert(o).select().single(),
-    update: (id, u) => supabase?.from('objectives').update(u).eq('id', id).select().single()
-  },
-  risks: {
-    getAll: (pi) => supabase?.from('risks').select('*').eq('pi_name', pi).order('created_at'),
-    create: (r) => supabase?.from('risks').insert(r).select().single(),
-    update: (id, u) => supabase?.from('risks').update(u).eq('id', id).select().single()
-  },
-  absences: {
-    getAll: (pi) => supabase?.from('absences').select('*').eq('pi_name', pi),
-    upsert: (a) => supabase?.from('absences').upsert(a, { onConflict: 'team_id,member_id,sprint,pi_name' }).select().single()
-  },
-  milestones: {
-    getAll: (pi) => supabase?.from('milestones').select('*').eq('pi_name', pi).order('sprint')
-  },
-  history: {
-    getRecent: (limit = 100) => supabase?.from('change_history').select('*').order('changed_at', { ascending: false }).limit(limit)
-  }
-};
+// ═══ AUTH HELPERS ═══
+export async function signInWithGoogle() {
+  if (!supabase) return { error: 'Supabase not configured' }
+  return supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin }
+  })
+}
 
-export const realtime = {
-  subscribe: (table, cb) => supabase?.channel(`${table}_ch`).on('postgres_changes', { event: '*', schema: 'public', table }, cb).subscribe(),
-  unsubscribe: (ch) => supabase?.removeChannel(ch)
-};
+export async function signInWithEmail(email) {
+  if (!supabase) return { error: 'Supabase not configured' }
+  return supabase.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.origin }
+  })
+}
+
+export async function signOut() {
+  if (!supabase) return
+  return supabase.auth.signOut()
+}
+
+export async function getSession() {
+  if (!supabase) return null
+  const { data } = await supabase.auth.getSession()
+  return data.session
+}
+
+// ═══ ICS CALENDAR EXPORT ═══
+export function generateICS(trip, days) {
+  const esc = s => (s || '').replace(/[,;\\]/g, c => '\\' + c).replace(/\n/g, '\\n')
+  let ics = 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Ventura//Trip Planner//EN\nCALSCALE:GREGORIAN\n'
+  
+  days.forEach(day => {
+    day.items.forEach(item => {
+      const dt = day.date ? day.date.replace(/-/g, '') : '20250101'
+      const time = (item.time || '10:00').replace(':', '') + '00'
+      ics += 'BEGIN:VEVENT\n'
+      ics += `DTSTART:${dt}T${time}\n`
+      ics += `SUMMARY:${esc(item.name)}\n`
+      ics += `DESCRIPTION:${esc(item.desc || '')} — ${trip.dest || ''}\n`
+      ics += `LOCATION:${esc(trip.dest || '')}\n`
+      ics += `UID:${item.id || Date.now()}-${Math.random().toString(36).slice(2)}@ventura\n`
+      ics += 'END:VEVENT\n'
+    })
+  })
+  ics += 'END:VCALENDAR'
+  
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${(trip.name || 'trip').replace(/\s+/g, '-').toLowerCase()}.ics`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+// ═══ SHARE LINK ═══
+export function getShareUrl(trip) {
+  const base = window.location.origin
+  return `${base}/?trip=${trip.shareToken || trip.id}`
+}
+
+export function copyShareLink(trip) {
+  const url = getShareUrl(trip)
+  navigator.clipboard?.writeText(url)
+  return url
+}

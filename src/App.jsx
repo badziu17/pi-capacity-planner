@@ -1,170 +1,944 @@
-import React, { useState, useMemo, createContext, useContext } from 'react';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { isSupabaseConfigured, generateICS, copyShareLink } from "./supabase";
+/* VENTURA v6.0 — Group Travel OS
+   MapLibre maps · Supabase-ready · PWA · Expense splitting ·
+   AI group consensus · Share links · ICS export · PL/EN i18n */
 
-const AppContext = createContext();
-const useApp = () => useContext(AppContext);
+// ══ i18n ══
+const T={welcome:{pl:"Witaj ponownie",en:"Welcome back"},planNext:{pl:"Zaplanuj następną przygodę",en:"Plan your next adventure"},newTrip:{pl:"Nowa podróż",en:"New Trip"},back:{pl:"← Powrót",en:"← Back"},save:{pl:"Zapisz",en:"Save"},cancel:{pl:"Anuluj",en:"Cancel"},delete:{pl:"Usuń",en:"Delete"},add:{pl:"Dodaj",en:"Add"},close:{pl:"Zamknij",en:"Close"},selectProfile:{pl:"Wybierz profil",en:"Select profile"},continueAsGuest:{pl:"Kontynuuj jako gość",en:"Continue as guest"},guestMode:{pl:"Tryb gościa",en:"Guest mode"},guestNotice:{pl:"Oglądaj podróże demo. Możesz planować, ale bez zapisu.",en:"Browse demo trips. You can plan, but changes won't be saved."},signOut:{pl:"Wyloguj",en:"Sign Out"},loginToSave:{pl:"Zaloguj się, aby zapisać",en:"Log in to save"},tabTrip:{pl:"Podróż",en:"Trip"},tabPlan:{pl:"Plan",en:"Plan"},tabAI:{pl:"AI",en:"AI"},tabPack:{pl:"Pakuj",en:"Pack"},tabJournal:{pl:"Dziennik",en:"Journal"},tabBudget:{pl:"Budżet",en:"Budget"},tabBook:{pl:"Rezerwuj",en:"Book"},tabMemories:{pl:"Wspomnienia",en:"Memories"},tabMap:{pl:"Mapa",en:"Map"},tripReadiness:{pl:"Gotowość podróży",en:"Trip readiness"},completeToPrep:{pl:"Wykonaj te kroki",en:"Complete these steps"},travelers:{pl:"podróżni",en:"travelers"},observers:{pl:"obserwatorzy",en:"observers"},upcoming:{pl:"nadchodzący",en:"upcoming"},planning:{pl:"planowanie",en:"planning"},past:{pl:"przeszły",en:"past"},currency:{pl:"Waluta",en:"Currency"},deleteTrip:{pl:"Usuń podróż",en:"Delete trip"},getInspired:{pl:"Zainspiruj się",en:"Get inspired"},dayOverloaded:{pl:"⚠️ Dzień przeładowany! Przenieś część aktywności.",en:"⚠️ Day overloaded! Move some activities."},proposeActivity:{pl:"Zaproponuj atrakcję",en:"Propose activity"},approved:{pl:"Zatwierdzone",en:"Approved"},pending:{pl:"Oczekuje",en:"Pending"},votes:{pl:"głosy",en:"votes"},packingProgress:{pl:"Postęp pakowania",en:"Packing Progress"},templates:{pl:"Szablony",en:"Templates"},saveList:{pl:"Zapisz listę",en:"Save list"},loadList:{pl:"Wczytaj",en:"Load"},addItem:{pl:"Dodaj pozycję",en:"Add item"},category:{pl:"Kategoria",en:"Category"},itemName:{pl:"Nazwa",en:"Name"},aiSuggestions:{pl:"Sugestie AI",en:"AI Suggestions"},dontForget:{pl:"Nie zapomnij o...",en:"Don't forget..."},vacationRequest:{pl:"Wniosek urlopowy",en:"Vacation request"},vacNotApplied:{pl:"Nie złożono",en:"Not applied"},vacApplied:{pl:"Złożono",en:"Applied"},vacApproved:{pl:"Zatwierdzony ✓",en:"Approved ✓"},vacDenied:{pl:"Odrzucony ✕",en:"Denied ✕"},spent:{pl:"Wydano",en:"Spent"},budget:{pl:"Budżet",en:"Budget"},remaining:{pl:"pozostało",en:"remaining"},overBudget:{pl:"przekroczono!",en:"over budget!"},expenses:{pl:"Wydatki",en:"Expenses"},addExpense:{pl:"Dodaj wydatek",en:"Add expense"},spendingBreakdown:{pl:"Podział wydatków",en:"Spending Breakdown"},insights:{pl:"Wnioski",en:"Insights"},exchangeRates:{pl:"Kursy walut",en:"Exchange rates"},indicative:{pl:"orientacyjne",en:"indicative"},writeMemory:{pl:"Napisz wspomnienie...",en:"Write a memory..."},yourJournal:{pl:"Twój dziennik",en:"Your journal"},recommendedDeals:{pl:"Polecane oferty",en:"Recommended Deals"},compareStays:{pl:"Porównaj noclegi",en:"Compare Stays"},compareStaysDesc:{pl:"Dodaj linki z Booking.com, Airbnb. Głosuj z grupą!",en:"Add Booking.com, Airbnb links. Vote with your group!"},proposePlac:{pl:"Zaproponuj miejsce",en:"Propose a place"},carRental:{pl:"Wynajem samochodu",en:"Car Rental"},carRentalDesc:{pl:"Porównaj oferty wynajmu aut.",en:"Compare car rental offers."},travelInsurance:{pl:"Ubezpieczenie podróżne",en:"Travel Insurance"},insuranceDesc:{pl:"Wykup ubezpieczenie przed wyjazdem.",en:"Get insurance before your trip."},gettingAround:{pl:"Jak się poruszać",en:"Getting Around"},airportTransfer:{pl:"Transfer z lotniska",en:"Airport Transfer"},localCustoms:{pl:"Lokalne zwyczaje",en:"Local Customs"},travelAdvisory:{pl:"Zalecenia MSZ",en:"Travel Advisory"},requiredDocs:{pl:"Wymagane dokumenty",en:"Required Documents"},myProfile:{pl:"Mój profil",en:"My Profile"},profilePhoto:{pl:"Zdjęcie profilowe",en:"Profile photo"},socialMedia:{pl:"Media społecznościowe",en:"Social media"},travelFriends:{pl:"Znajomi podróżni",en:"Travel Friends"},travelFriendsDesc:{pl:"Osoby, z którymi podróżujesz",en:"People you travel with"},addFriend:{pl:"Dodaj znajomego",en:"Add friend"},noFriendsYet:{pl:"Brak znajomych.",en:"No friends yet."},tripStats:{pl:"Statystyki",en:"Trip Stats"},approveThis:{pl:"Zatwierdzam",en:"Approve"},tripMembers:{pl:"Uczestnicy",en:"Members"},inviteSomeone:{pl:"+ Zaproś",en:"+ Invite"},whereGoing:{pl:"Dokąd jedziesz?",en:"Where to?"},whenWho:{pl:"Kiedy i z kim?",en:"When & who?"},almostThere:{pl:"Prawie gotowe!",en:"Almost there!"},createTrip:{pl:"🚀 Stwórz podróż",en:"🚀 Create Trip"},tripSummary:{pl:"Podsumowanie",en:"Summary"},addDay:{pl:"+ Dodaj dzień",en:"+ Add day"},addActivity:{pl:"+ Dodaj aktywność",en:"+ Add activity"},dayTitle:{pl:"Tytuł dnia",en:"Day title"},activityName:{pl:"Nazwa atrakcji",en:"Activity name"},time:{pl:"Godzina",en:"Time"},duration:{pl:"Czas",en:"Duration"},type:{pl:"Typ",en:"Type"},cost:{pl:"Koszt",en:"Cost"},dragHint:{pl:"Przeciągnij aby zmienić kolejność",en:"Drag to reorder"},aiPlanner:{pl:"Planer AI",en:"AI Planner"},assignTo:{pl:"Przypisz do",en:"Assign to"},unassigned:{pl:"Nieprzypisane",en:"Unassigned"},ticketsNeeded:{pl:"Bilety wymagane",en:"Tickets Required"},ticketsDesc:{pl:"Atrakcje z planu wymagające zakupu biletów",en:"Planned attractions requiring ticket purchase"},addTicketLink:{pl:"Dodaj link do biletu",en:"Add ticket link"},ticketBought:{pl:"Kupiony ✓",en:"Bought ✓"},ticketNeeded:{pl:"Do kupienia",en:"To buy"},stepCounter:{pl:"Licznik kroków",en:"Step Counter"},stepsToday:{pl:"Kroków dziś",en:"Steps today"},syncHealth:{pl:"Synchronizuj z Health",en:"Sync with Health"},allApprovedTitle:{pl:"🎉 Wszyscy mają urlop!",en:"🎉 Everyone's got leave!"},allApprovedMsg:{pl:"Wszystkie wnioski urlopowe zatwierdzone — czas skupić się na planowaniu wymarzonej podróży!",en:"All vacation requests approved — time to focus on planning your dream trip!"},letsGo:{pl:"Do planowania! 🚀",en:"Let's plan! 🚀"},clickToChangePhoto:{pl:"Kliknij, aby zmienić zdjęcie",en:"Click to change photo"},shareTrip:{pl:"Udostępnij",en:"Share"},copyLink:{pl:"Kopiuj link",en:"Copy link"},linkCopied:{pl:"Link skopiowany!",en:"Link copied!"},exportCalendar:{pl:"Eksport do kalendarza",en:"Export to calendar"},publicTrip:{pl:"Publiczna podróż",en:"Public trip"},paidBy:{pl:"Zapłacił",en:"Paid by"},splitAmong:{pl:"Dzielone na",en:"Split among"},everyone:{pl:"Wszystkich",en:"Everyone"},settlements:{pl:"Rozliczenia",en:"Settlements"},owes:{pl:"jest winien",en:"owes"},settled:{pl:"Rozliczono",en:"Settled"},mapNoActivities:{pl:"Dodaj aktywności z lokalizacją, aby zobaczyć mapę",en:"Add activities with locations to see the map"},aiGroupTitle:{pl:"✨ Grupowy konsensus AI",en:"✨ AI Group Consensus"},aiGroupDesc:{pl:"Zbierz preferencje grupy i wygeneruj idealny plan",en:"Collect group preferences and generate the perfect plan"},generatePlan:{pl:"Wygeneruj plan",en:"Generate plan"},preferences:{pl:"Preferencje",en:"Preferences"},pace:{pl:"Tempo",en:"Pace"},interests:{pl:"Zainteresowania",en:"Interests"},budgetRange:{pl:"Zakres budżetu",en:"Budget range"},installApp:{pl:"Zainstaluj aplikację",en:"Install app"},install:{pl:"Instaluj",en:"Install"}};
 
-const T = {
-  en: { app: { title: 'PI Capacity Planner', subtitle: 'SAFe 6.0 • Enterprise Edition' }, nav: { capacity: 'Capacity Board', backlog: 'PI Backlog', teams: 'Teams', program: 'Program Board', dashboard: 'RTE Dashboard', whatif: 'What-If', risks: 'Risks', reports: 'Reports & AI', portfolio: 'Portfolio', settings: 'Settings', dependencies: 'Dependencies' }, auth: { signIn: 'Sign In', signOut: 'Sign Out', role: 'Role', demoMode: 'Demo Mode', admin: 'Admin', rte: 'RTE/PM', teamLead: 'Team Lead', member: 'Member', viewer: 'Viewer' }, cap: { title: 'Capacity vs Demand', unplanned: 'Unplanned' }, dash: { title: 'RTE Dashboard', subtitle: 'PI Health Overview', healthScore: 'PI Health Score', totalCapacity: 'Total Capacity', totalDemand: 'Total Demand', avgLoad: 'Avg Load', reserve: 'Reserve', overbooked: 'Overbooked', teamBreakdown: 'Team Breakdown', onTrack: 'On Track' }, deps: { title: 'Dependencies', healthy: 'Healthy', atRisk: 'At Risk', violated: 'Violated', add: 'Add Dependency', provider: 'Provider', consumer: 'Consumer', lowReserve: 'Low reserve', noBuffer: 'No buffer!' }, risks: { title: 'Risks & Confidence', confidence: 'Confidence Vote', avgConfidence: 'Avg Confidence', topRisks: 'Top Risks', addRisk: 'Add Risk', high: 'High', medium: 'Medium', low: 'Low', owner: 'Owner', mitigation: 'Mitigation', resolved: 'Resolved', owned: 'Owned', accepted: 'Accepted', mitigated: 'Mitigated', startVote: 'Start Voting', endVote: 'End Voting' }, reports: { title: 'Reports & AI Forecasts', monteCarlo: 'Monte Carlo Simulation', runSimulation: 'Run Analysis', p50: 'P50', p75: 'P75', p90: 'P90', exportCSV: 'Export CSV', aiTitle: 'AI Velocity Forecast', nextPI: 'Next PI Forecast', confidence: 'Confidence', recommendation: 'Recommendation' }, portfolio: { title: 'Portfolio View', subtitle: 'Multi-ART Capacity', totalCapacity: 'Portfolio Capacity', totalDemand: 'Portfolio Demand', crossART: 'Cross-ART Dependencies', suggestion: 'AI Suggestion', rebalance: 'Rebalance' }, whatif: { title: 'What-If Scenarios', baseline: 'Baseline', scenarioA: 'Scenario A', scenarioB: 'Scenario B' }, settings: { title: 'Settings', integrations: 'Integrations', alerts: 'Alerts', audit: 'Audit Trail', testConnection: 'Test Connection', connected: 'Connected', syncNow: 'Sync Now', autoSync: 'Auto-sync 5min', webhook: 'Webhook URL', testAlert: 'Test Alert' }, teams: { title: 'Teams', velocity: 'Velocity', members: 'Members', absences: 'Absences', holidays: 'Holidays', addTeam: 'Add Team', teamName: 'Team Name' }, backlog: { title: 'PI Backlog', addItem: 'Add', name: 'Name', epic: 'Epic', feature: 'Feature', story: 'Story', enabler: 'Enabler', unassigned: 'Unassigned', status: 'Status', notStarted: 'Not Started', inProgress: 'In Progress', done: 'Done', blocked: 'Blocked', description: 'Description', acceptanceCriteria: 'Acceptance Criteria' }, program: { title: 'Program Board' }, item: { details: 'Item Details', parent: 'Parent', children: 'Children', linkedDeps: 'Dependencies' }, c: { save: 'Save', cancel: 'Cancel', delete: 'Delete', add: 'Add', sp: 'SP', sprint: 'Sprint', team: 'Team', total: 'Total' } },
-  pl: { app: { title: 'PI Capacity Planner', subtitle: 'SAFe 6.0 • Enterprise Edition' }, nav: { capacity: 'Capacity Board', backlog: 'PI Backlog', teams: 'Zespoły', program: 'Program Board', dashboard: 'Dashboard RTE', whatif: 'What-If', risks: 'Ryzyka', reports: 'Raporty i AI', portfolio: 'Portfolio', settings: 'Ustawienia', dependencies: 'Zależności' }, auth: { signIn: 'Zaloguj', signOut: 'Wyloguj', role: 'Rola', demoMode: 'Tryb Demo', admin: 'Admin', rte: 'RTE/PM', teamLead: 'Team Lead', member: 'Członek', viewer: 'Obserwator' }, cap: { title: 'Capacity vs Demand', unplanned: 'Nieprzypisane' }, dash: { title: 'Dashboard RTE', subtitle: 'Przegląd PI', healthScore: 'Zdrowie PI', totalCapacity: 'Całk. Capacity', totalDemand: 'Całk. Demand', avgLoad: 'Śr. Load', reserve: 'Rezerwa', overbooked: 'Przeciążone', teamBreakdown: 'Zespoły', onTrack: 'OK' }, deps: { title: 'Zależności', healthy: 'OK', atRisk: 'Zagrożona', violated: 'Naruszona', add: 'Dodaj zależność', provider: 'Dostawca', consumer: 'Odbiorca', lowReserve: 'Mała rezerwa', noBuffer: 'Brak bufora!' }, risks: { title: 'Ryzyka i Confidence', confidence: 'Głosowanie', avgConfidence: 'Śr. Confidence', topRisks: 'Główne ryzyka', addRisk: 'Dodaj ryzyko', high: 'Wysoka', medium: 'Średnia', low: 'Niska', owner: 'Właściciel', mitigation: 'Mitygacja', resolved: 'Rozwiązane', owned: 'Z właścicielem', accepted: 'Zaakceptowane', mitigated: 'Zmitigowane', startVote: 'Rozpocznij', endVote: 'Zakończ' }, reports: { title: 'Raporty i prognozy AI', monteCarlo: 'Symulacja Monte Carlo', runSimulation: 'Uruchom analizę', p50: 'P50', p75: 'P75', p90: 'P90', exportCSV: 'Eksport CSV', aiTitle: 'Prognoza AI Velocity', nextPI: 'Prognoza PI', confidence: 'Pewność', recommendation: 'Rekomendacja' }, portfolio: { title: 'Widok Portfolio', subtitle: 'Multi-ART Capacity', totalCapacity: 'Capacity Portfolio', totalDemand: 'Demand Portfolio', crossART: 'Zależności cross-ART', suggestion: 'Sugestia AI', rebalance: 'Rebalansuj' }, whatif: { title: 'Scenariusze What-If', baseline: 'Baseline', scenarioA: 'Scenariusz A', scenarioB: 'Scenariusz B' }, settings: { title: 'Ustawienia', integrations: 'Integracje', alerts: 'Alerty', audit: 'Historia zmian', testConnection: 'Test połączenia', connected: 'Połączono', syncNow: 'Synchronizuj', autoSync: 'Auto-sync 5min', webhook: 'URL Webhook', testAlert: 'Testuj alert' }, teams: { title: 'Zespoły', velocity: 'Velocity', members: 'Członkowie', absences: 'Nieobecności', holidays: 'Święta', addTeam: 'Dodaj zespół', teamName: 'Nazwa' }, backlog: { title: 'PI Backlog', addItem: 'Dodaj', name: 'Nazwa', epic: 'Epic', feature: 'Feature', story: 'Story', enabler: 'Enabler', unassigned: 'Nieprzypisane', status: 'Status', notStarted: 'Nie rozpoczęte', inProgress: 'W trakcie', done: 'Zakończone', blocked: 'Zablokowane', description: 'Opis', acceptanceCriteria: 'Kryteria akceptacji' }, program: { title: 'Program Board' }, item: { details: 'Szczegóły', parent: 'Rodzic', children: 'Dzieci', linkedDeps: 'Zależności' }, c: { save: 'Zapisz', cancel: 'Anuluj', delete: 'Usuń', add: 'Dodaj', sp: 'SP', sprint: 'Sprint', team: 'Zespół', total: 'Suma' } }
+// ══ Design tokens ══
+const C={bg:"#FEFBF6",bgAlt:"#F7F3ED",white:"#FFFFFF",border:"#E8E2D9",borderLight:"#F0EBE3",primary:"#C4704B",primaryLight:"#F9EDE7",primaryDark:"#A85A38",blue:"#2563EB",blueLight:"#EFF6FF",sage:"#5F8B6A",sageLight:"#ECF4EE",coral:"#E8734A",coralLight:"#FEF0EB",gold:"#D4A853",goldLight:"#FDF8EC",purple:"#7C5CFC",purpleLight:"#F3F0FF",text:"#2C1810",textSec:"#6B5B4F",textDim:"#A09486",danger:"#DC3545",shadow:"0 1px 3px rgba(44,24,16,0.06),0 4px 12px rgba(44,24,16,0.04)",shadowMd:"0 2px 8px rgba(44,24,16,0.08),0 8px 24px rgba(44,24,16,0.06)"};
+const Fn="'Fraunces',serif";
+const fmt=n=>n!=null?n.toLocaleString("en",{maximumFractionDigits:0}):"0";
+const CURS=["PLN","EUR","RON","USD","GBP","CZK","JPY","CHF"];
+const CAT_I={Accommodation:"🏨",Food:"🍽️",Activities:"🎟️",Shopping:"🛍️",Transport:"🚗",Other:"💰"};
+const CAT_C={Accommodation:"#2563EB",Food:"#E8734A",Activities:"#7C5CFC",Shopping:"#D4A853",Transport:"#5F8B6A",Other:"#A09486"};
+const tE={sight:"📍",food:"🍽️",museum:"🖼️",shopping:"🛍️",transport:"🚌",activity:"🎯"};
+const RATES={"PLN":{"EUR":0.234,"RON":1.17,"USD":0.253,"GBP":0.199,"CZK":5.87,"JPY":38.5,"CHF":0.218},"EUR":{"PLN":4.28,"RON":4.97,"USD":1.08,"GBP":0.855,"CZK":25.1,"JPY":164.5,"CHF":0.935},"USD":{"PLN":3.95,"EUR":0.925,"RON":4.61,"GBP":0.79,"CZK":23.3,"JPY":152.5,"CHF":0.866},"GBP":{"PLN":5.02,"EUR":1.17,"RON":5.83,"USD":1.27,"CZK":29.4,"JPY":193,"CHF":1.10},"JPY":{"PLN":0.026,"EUR":0.00608,"USD":0.00656,"GBP":0.00518,"CHF":0.00569},"CHF":{"PLN":4.58,"EUR":1.07,"USD":1.155,"GBP":0.912,"JPY":176},"RON":{"PLN":0.856,"EUR":0.201,"USD":0.217},"CZK":{"PLN":0.17,"EUR":0.0398,"USD":0.0429}};
+const getRate=(f,t)=>{if(f===t)return 1;return RATES[f]?.[t]||1};
+const parseDur=s=>{if(!s)return 60;const h=s.match(/(\d+\.?\d*)h/);const m=s.match(/(\d+)min/);return(h?parseFloat(h[1])*60:0)+(m?parseInt(m[1]):0)||60};
+
+// ══ Destination data ══
+const DEST_CUR={"Romania":"RON","Japan":"JPY","Portugal":"EUR","Spain":"EUR","Italy":"EUR","France":"EUR","UK":"GBP","USA":"USD","Switzerland":"CHF","Czech":"CZK"};
+const getDestCur=d=>{if(!d)return"EUR";for(const[c,cur]of Object.entries(DEST_CUR)){if(d.includes(c))return cur}return"EUR"};
+
+// Destination coordinates for map centering
+const DEST_COORDS={"Bucharest":{lat:44.4268,lng:26.1025},"Romania":{lat:44.4268,lng:26.1025},"Tokyo":{lat:35.6762,lng:139.6503},"Japan":{lat:35.6762,lng:139.6503},"Lisbon":{lat:38.7223,lng:-9.1393},"Portugal":{lat:38.7223,lng:-9.1393},"Barcelona":{lat:41.3874,lng:2.1686},"Paris":{lat:48.8566,lng:2.3522},"Rome":{lat:41.9028,lng:12.4964},"London":{lat:51.5074,lng:-0.1278},"Prague":{lat:50.0755,lng:14.4378},"Berlin":{lat:52.5200,lng:13.4050},"Amsterdam":{lat:52.3676,lng:4.9041},"Vienna":{lat:48.2082,lng:16.3738},"Kraków":{lat:50.0647,lng:19.9450},"Warsaw":{lat:52.2297,lng:21.0122},"Gdańsk":{lat:54.3520,lng:18.6466}};
+const getDestCoords=d=>{if(!d)return{lat:48.8,lng:2.3};for(const[k,v]of Object.entries(DEST_COORDS)){if(d.includes(k))return v}return{lat:48.8,lng:2.3}};
+
+
+// ══ Transport & local data ══
+const TRANSPORT={
+"Bucharest":{rec:["metro","bus","taxi"],info:{pl:"Metro szybkie i tanie (M1-M5). Bolt/Uber najtańsze.",en:"Metro fast & cheap (M1-M5). Bolt/Uber cheapest."},modes:{bus:{r:3,n:{pl:"Sieć STB, bilety w kiosku/app",en:"STB network, tickets at kiosks/app"}},metro:{r:4,n:{pl:"Szybkie, czyste, 5 linii, ~3 RON",en:"Fast, clean, 5 lines, ~3 RON"}},taxi:{r:4,n:{pl:"Bolt/Uber taniej niż trad.",en:"Bolt/Uber cheaper than traditional"}},walk:{r:3,n:{pl:"Centrum OK pieszo",en:"Center OK on foot"}}},airport:{pl:"Henri Coandă → centrum: Bus 783 (~4 RON), Bolt (~60 RON).",en:"Henri Coandă → center: Bus 783 (~4 RON), Bolt (~60 RON)."}},
+"Tokyo":{rec:["metro","train","walk"],info:{pl:"Tokio ma najlepszy transport publiczny na świecie.",en:"Tokyo has the world's best public transport."},modes:{metro:{r:5,n:{pl:"Suica/Pasmo, 13 linii metra",en:"Suica/Pasmo card, 13 metro lines"}},train:{r:5,n:{pl:"JR, Shinkansen, podmiejskie",en:"JR, Shinkansen, suburban"}},bus:{r:3,n:{pl:"Uzupełnienie metra",en:"Supplements metro"}},walk:{r:4,n:{pl:"Dzielnice kompaktowe",en:"Districts are walkable"}}},airport:{pl:"Narita/Haneda → centrum: Narita Express (~3000¥), Limousine Bus (~1000¥).",en:"Narita/Haneda → center: Narita Express (~3000¥), Limousine Bus (~1000¥)."}},
+"Lisbon":{rec:["metro","tram","walk"],info:{pl:"Lizbona kompaktowa, tramwaj 28 kultowy.",en:"Lisbon compact, Tram 28 iconic."},modes:{metro:{r:4,n:{pl:"4 linie, szybkie, ~1.5€",en:"4 lines, fast, ~1.5€"}},tram:{r:4,n:{pl:"Tramwaj 28 — must-do",en:"Tram 28 — must-do"}},walk:{r:3,n:{pl:"Pagórkowate, wygodne buty!",en:"Hilly, wear comfy shoes!"}},taxi:{r:4,n:{pl:"Bolt/Uber popularne, tanie",en:"Bolt/Uber popular, cheap"}}},airport:{pl:"Aeroporto → centrum: Metro czerwona (~1.5€, 25 min), Uber (~10€).",en:"Airport → center: Metro red line (~1.5€, 25 min), Uber (~10€)."}}
 };
 
-const HOLIDAYS_2025 = [{ date: '2025-01-01', name: 'Nowy Rok' }, { date: '2025-01-06', name: 'Trzech Króli' }, { date: '2025-04-20', name: 'Wielkanoc' }, { date: '2025-04-21', name: 'Pon. Wielk.' }, { date: '2025-05-01', name: 'Święto Pracy' }, { date: '2025-05-03', name: '3 Maja' }, { date: '2025-06-08', name: 'Zielone Świątki' }, { date: '2025-06-19', name: 'Boże Ciało' }, { date: '2025-08-15', name: 'Wniebowzięcie' }, { date: '2025-11-01', name: 'Wszystkich Św.' }, { date: '2025-11-11', name: 'Niepodległości' }, { date: '2025-12-25', name: 'Boże Narodzenie' }, { date: '2025-12-26', name: 'Drugi dzień świąt' }];
-const PI_CONFIG = { PI44: { name: 'PI 2025.1', start: '2025-02-19', sprints: 5, sprintLength: 10 }, PI45: { name: 'PI 2025.2', start: '2025-04-30', sprints: 5, sprintLength: 10 }, PI46: { name: 'PI 2025.3', start: '2025-07-09', sprints: 5, sprintLength: 10 } };
-const ROLES = { admin: { canEdit: true }, rte: { canEdit: true }, teamLead: { canEdit: true }, member: { canEdit: false }, viewer: { canEdit: false } };
-const ITEM_TYPES = { epic: { color: '#8b5cf6', label: 'Epic', sizes: [40, 100, 200] }, feature: { color: '#22d3ee', label: 'Feature', sizes: [13, 20, 40] }, story: { color: '#34d399', label: 'Story', sizes: [1, 2, 3, 5, 8, 13] }, enabler: { color: '#f59e0b', label: 'Enabler', sizes: [5, 8, 13, 20] } };
-
-const uid = () => Math.random().toString(36).substr(2, 9);
-const parseDate = (s) => new Date(s + 'T00:00:00');
-const formatDate = (d) => d.toISOString().split('T')[0];
-const isWeekend = (d) => d.getDay() === 0 || d.getDay() === 6;
-const isHoliday = (d) => HOLIDAYS_2025.some(h => h.date === formatDate(d));
-const getWorkDays = (start, end) => { let c = 0; const cur = new Date(start); while (cur <= end) { if (!isWeekend(cur) && !isHoliday(cur)) c++; cur.setDate(cur.getDate() + 1); } return c; };
-const addWorkDays = (start, days) => { const r = new Date(start); let a = 0; while (a < days) { r.setDate(r.getDate() + 1); if (!isWeekend(r) && !isHoliday(r)) a++; } return r; };
-const getLoadColor = (load) => load <= 0.8 ? { bg: 'bg-emerald-500/20', border: 'border-emerald-500/50', text: 'text-emerald-400', fill: '#34d399' } : load <= 1.0 ? { bg: 'bg-amber-500/20', border: 'border-amber-500/50', text: 'text-amber-400', fill: '#f59e0b' } : { bg: 'bg-red-500/20', border: 'border-red-500/50', text: 'text-red-400', fill: '#ef4444' };
-const calculateSprints = (piConfig) => { const sprints = []; let cur = parseDate(piConfig.start); for (let i = 1; i <= piConfig.sprints; i++) { const end = addWorkDays(cur, piConfig.sprintLength - 1); sprints.push({ num: i, name: i === piConfig.sprints ? 'IP' : `S${i}`, start: new Date(cur), end, workDays: getWorkDays(cur, end), isIP: i === piConfig.sprints }); cur = new Date(end); cur.setDate(cur.getDate() + 1); while (isWeekend(cur)) cur.setDate(cur.getDate() + 1); } return sprints; };
-
-const AIForecastEngine = {
-  analyzeVelocityTrend: (data) => { if (!data || data.length < 3) return { trend: 0, forecast: 40, confidence: 0.5, factors: [] }; const n = data.length, yMean = data.reduce((a, b) => a + b, 0) / n; let num = 0, den = 0; data.forEach((y, x) => { num += (x - (n-1)/2) * (y - yMean); den += (x - (n-1)/2) ** 2; }); const slope = den !== 0 ? num / den : 0; const forecast = Math.round(yMean + slope * n); const variance = data.reduce((sum, y) => sum + (y - yMean) ** 2, 0) / n; const stdDev = Math.sqrt(variance); const factors = []; if (slope > 1) factors.push({ type: 'positive', label: 'Improving velocity' }); if (slope < -1) factors.push({ type: 'negative', label: 'Declining velocity' }); return { trend: slope, forecast: Math.max(10, forecast), forecastLow: Math.max(10, Math.round(forecast - stdDev * 1.5)), forecastHigh: Math.round(forecast + stdDev * 1.5), confidence: 0.7, stdDev, factors, recommendation: slope > 0 ? 'Team improving.' : slope < -1 ? 'Declining trend.' : 'Stable velocity.' }; },
-  forecastART: (teams) => { const forecasts = teams.map(t => ({ ...t, forecast: AIForecastEngine.analyzeVelocityTrend(t.historicalVelocity) })); const totalForecast = forecasts.reduce((s, t) => s + t.forecast.forecast, 0); return { teamForecasts: forecasts, totalForecast, totalLow: forecasts.reduce((s, t) => s + t.forecast.forecastLow, 0), totalHigh: forecasts.reduce((s, t) => s + t.forecast.forecastHigh, 0), avgConfidence: 0.7, piCapacity: totalForecast * 5, recommendation: 'Plan at P75 with buffer.' }; }
+const CUSTOMS={
+"Romania":[{icon:"🍷",t:{pl:"Rum. gościnność — nie odmawiaj jedzenia/picia",en:"Romanian hospitality — don't refuse food/drink"}},{icon:"🤝",t:{pl:"Uścisk dłoni na powitanie",en:"Handshake greeting"}},{icon:"💰",t:{pl:"Napiwki 10% w restauracjach",en:"Tips 10% in restaurants"}}],
+"Japan":[{icon:"🙇",t:{pl:"Ukłon zamiast uścisku dłoni",en:"Bow instead of handshake"}},{icon:"🚫",t:{pl:"Nie dawaj napiwków — to niegrzeczne",en:"No tipping — it's considered rude"}},{icon:"👟",t:{pl:"Zdejmuj buty w domach i świątyniach",en:"Remove shoes in homes and temples"}},{icon:"🔇",t:{pl:"Cisza w transporcie publicznym",en:"Quiet on public transport"}}],
+"Portugal":[{icon:"☕",t:{pl:"Kawa = espresso (bica w Lizbonie)",en:"Coffee = espresso (bica in Lisbon)"}},{icon:"🐟",t:{pl:"Bacalhau — narodowe danie, 365 przepisów",en:"Bacalhau — national dish, 365 recipes"}},{icon:"🕐",t:{pl:"Kolacja po 20:00, nie spiesz się",en:"Dinner after 8pm, take your time"}}]
 };
 
-const MonteCarloEngine = {
-  runSimulation: (teams, items, iterations = 10000) => { const features = items.filter(i => i.type === 'feature' && i.status !== 'done'); const totalSP = features.reduce((s, f) => s + (f.sp || 0), 0); const teamStats = teams.map(t => { const v = t.historicalVelocity || [t.velocity]; const mean = v.reduce((a, b) => a + b, 0) / v.length; return { mean, stdDev: Math.sqrt(v.reduce((s, x) => s + (x - mean) ** 2, 0) / v.length) }; }); const totalMean = teamStats.reduce((s, t) => s + t.mean, 0); const totalStdDev = Math.sqrt(teamStats.reduce((s, t) => s + t.stdDev ** 2, 0)); const results = []; for (let i = 0; i < iterations; i++) { const z = Math.sqrt(-2 * Math.log(Math.random())) * Math.cos(2 * Math.PI * Math.random()); results.push(Math.ceil(totalSP / Math.max(totalMean + z * totalStdDev, totalMean * 0.5))); } results.sort((a, b) => a - b); const histogram = []; const min = Math.min(...results), max = Math.max(...results); const bucketSize = Math.max(1, Math.ceil((max - min + 1) / 15)); for (let i = min; i <= max; i += bucketSize) histogram.push({ sprints: i, count: results.filter(r => r >= i && r < i + bucketSize).length, pct: (results.filter(r => r >= i && r < i + bucketSize).length / iterations) * 100 }); return { totalSP, meanVelocity: totalMean, p50: results[Math.floor(iterations * 0.5)], p75: results[Math.floor(iterations * 0.75)], p90: results[Math.floor(iterations * 0.9)], min: results[0], max: results[results.length - 1], histogram }; },
-  generateCSV: (data) => { const { teams, items, simulation, pi, forecast } = data; let csv = `PI Report - ${pi}\n\nMONTE CARLO\nTotal SP,${simulation?.totalSP || 0}\nP50,${simulation?.p50 || 0}\nP75,${simulation?.p75 || 0}\nP90,${simulation?.p90 || 0}\n\nTEAMS\nTeam,Velocity,Load\n`; teams.forEach(t => { const sp = items.filter(i => i.teamId === t.id).reduce((s, i) => s + (i.sp || 0), 0); csv += `${t.name},${t.velocity},${((sp / (t.velocity * 5)) * 100).toFixed(0)}%\n`; }); return csv; }
+const ADVISORY={
+"Romania":{level:{pl:"Normalne środki ostrożności",en:"Normal precautions"},color:C.sage,info:{pl:"Rumunia bezpieczna dla turystów. Uważaj na kieszonkowców w Bukareszcie.",en:"Romania safe for tourists. Watch for pickpockets in Bucharest."},docs:[{t:{pl:"Dowód osobisty / paszport (UE)",en:"ID card / passport (EU)"},req:true},{t:{pl:"EKUZ / ubezpieczenie zdrowotne",en:"EHIC / health insurance"},req:true}]},
+"Japan":{level:{pl:"Normalne środki ostrożności",en:"Normal precautions"},color:C.sage,info:{pl:"Japonia jedno z najbezpieczniejszych państw świata.",en:"Japan one of the safest countries in the world."},docs:[{t:{pl:"Paszport (wiza nie wymagana do 90 dni dla UE)",en:"Passport (visa not required up to 90 days for EU)"},req:true},{t:{pl:"Visit Japan Web — rejestracja przed wjazdem",en:"Visit Japan Web — register before entry"},req:true}]},
+"Portugal":{level:{pl:"Normalne środki ostrożności",en:"Normal precautions"},color:C.sage,info:{pl:"Portugalia bardzo bezpieczna. Uważaj na drobne kradzieże w Lizbonie.",en:"Portugal very safe. Watch for petty theft in Lisbon."},docs:[{t:{pl:"Dowód osobisty (UE) lub paszport",en:"ID card (EU) or passport"},req:true}]}
 };
 
-const createDemoData = () => {
-  const arts = [{ id: 'art1', name: 'Customer Platform ART', color: '#22d3ee', teamIds: ['team1', 'team2', 'team3'] }, { id: 'art2', name: 'Internal Tools ART', color: '#8b5cf6', teamIds: ['team4', 'team5'] }];
-  const teams = [{ id: 'team1', name: 'Team Alpha', color: '#22d3ee', velocity: 40, artId: 'art1', members: [{ id: 'm1', name: 'Anna K.', fte: 1.0 }, { id: 'm2', name: 'Jan N.', fte: 1.0 }], confidence: 4, historicalVelocity: [38, 42, 40, 35, 44, 41, 39, 43] }, { id: 'team2', name: 'Team Beta', color: '#34d399', velocity: 35, artId: 'art1', members: [{ id: 'm3', name: 'Katarzyna L.', fte: 1.0 }], confidence: 3, historicalVelocity: [32, 36, 34, 38, 33, 35, 37, 36] }, { id: 'team3', name: 'Team Gamma', color: '#f59e0b', velocity: 30, artId: 'art1', members: [{ id: 'm4', name: 'Ewa D.', fte: 1.0 }], confidence: 4, historicalVelocity: [28, 32, 30, 29, 31, 30, 33, 31] }, { id: 'team4', name: 'Team Delta', color: '#ec4899', velocity: 25, artId: 'art2', members: [{ id: 'm5', name: 'Krzysztof B.', fte: 1.0 }], confidence: 4, historicalVelocity: [24, 26, 25, 27, 24, 25] }, { id: 'team5', name: 'Team Epsilon', color: '#6366f1', velocity: 28, artId: 'art2', members: [{ id: 'm6', name: 'Paweł K.', fte: 1.0 }], confidence: 3, historicalVelocity: [26, 28, 30, 27, 29, 28] }];
-  const items = [{ id: 'e1', type: 'epic', name: 'User Management Platform', sp: 0, status: 'inProgress', artId: 'art1' }, { id: 'f1', type: 'feature', name: 'OAuth2 Authentication', sp: 40, teamId: 'team1', sprint: 1, status: 'inProgress', parentId: 'e1' }, { id: 'f2', type: 'feature', name: 'User Profiles', sp: 20, teamId: 'team1', sprint: 2, status: 'notStarted', parentId: 'e1' }, { id: 'f3', type: 'feature', name: 'REST API v1', sp: 48, teamId: 'team2', sprint: 1, status: 'inProgress' }, { id: 'f4', type: 'feature', name: 'Dashboard Charts', sp: 35, teamId: 'team2', sprint: 2, status: 'notStarted' }, { id: 'f5', type: 'feature', name: 'Permission System', sp: 25, teamId: 'team1', sprint: 3, status: 'notStarted', parentId: 'e1' }, { id: 'f6', type: 'feature', name: 'Data Export', sp: 20, teamId: 'team3', sprint: 2, status: 'notStarted' }, { id: 'f7', type: 'feature', name: 'Real-time Updates', sp: 30, teamId: 'team3', sprint: 3, status: 'notStarted' }, { id: 'en1', type: 'enabler', name: 'CI/CD Pipeline', sp: 13, teamId: 'team3', sprint: 1, status: 'done' }, { id: 'f8', type: 'feature', name: 'Admin Panel', sp: 30, teamId: 'team4', sprint: 1, artId: 'art2', status: 'notStarted' }, { id: 'f9', type: 'feature', name: 'Report Generator', sp: 25, teamId: 'team5', sprint: 2, artId: 'art2', status: 'notStarted' }, { id: 'f10', type: 'feature', name: 'Mobile App Shell', sp: 40, status: 'notStarted' }];
-  const dependencies = [{ id: 'd1', fromId: 'f3', toId: 'f1', description: 'API needed for OAuth' }, { id: 'd2', fromId: 'f1', toId: 'f5', description: 'Auth before permissions' }, { id: 'd3', fromId: 'f4', toId: 'f6', description: 'Charts for export' }, { id: 'd4', fromId: 'f8', toId: 'f9', description: 'Admin before reports', crossART: true }];
-  const risks = [{ id: 'r1', name: 'Third-party API rate limits', severity: 'high', owner: 'Team Beta', status: 'owned', mitigation: 'Implement caching' }, { id: 'r2', name: 'New team member onboarding', severity: 'medium', owner: 'Team Alpha', status: 'mitigated', mitigation: 'Pair programming' }];
-  const absences = { 'team1-m1-2': 2, 'team1-m2-3': 5, 'team2-m3-1': 3 };
-  const milestones = [{ id: 'ms1', name: 'MVP Release', sprint: 3, color: '#f59e0b' }, { id: 'ms2', name: 'Beta Launch', sprint: 5, color: '#8b5cf6' }];
-  const auditLog = [{ id: 'a1', user: 'demo@pi-planner.app', action: 'created', entity: 'Feature', timestamp: new Date().toISOString(), details: 'Created OAuth2' }];
-  return { arts, teams, items, dependencies, risks, absences, milestones, auditLog };
-};
+// ══ Demo photo URLs ══
+const DEST_PHOTOS={"Romania, Bucharest":["https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=800","https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=800"],"Japan, Tokyo":["https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800","https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800"],"Portugal, Lisbon":["https://images.unsplash.com/photo-1585208798174-6cedd86e019a?w=800","https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=800"]};
+const INSP=[{name:"Lisbon",img:"https://images.unsplash.com/photo-1585208798174-6cedd86e019a?w=400"},{name:"Tokyo",img:"https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400"},{name:"Barcelona",img:"https://images.unsplash.com/photo-1583422409516-2895a77efded?w=400"},{name:"Prague",img:"https://images.unsplash.com/photo-1592906209472-a36b1f3782ef?w=400"},{name:"Rome",img:"https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400"}];
 
-const Icon = ({ name, className = 'w-5 h-5' }) => { const paths = { capacity: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', backlog: 'M4 6h16M4 10h16M4 14h16M4 18h16', teams: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', program: 'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2', dashboard: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z', whatif: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4', risks: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z', reports: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', portfolio: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10', settings: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z', plus: 'M12 4v16m8-8H4', x: 'M6 18L18 6M6 6l12 12', check: 'M5 13l4 4L19 7', trash: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16', link: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1', sync: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15', ai: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z', trendUp: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6', trendDown: 'M13 17h8m0 0V9m0 8l-8-8-4 4-6-6', download: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4' }; return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={paths[name] || paths.check} /></svg>; };
-const Badge = ({ children, variant = 'default' }) => { const variants = { default: 'bg-slate-700 text-slate-300', success: 'bg-emerald-500/20 text-emerald-400', warning: 'bg-amber-500/20 text-amber-400', danger: 'bg-red-500/20 text-red-400', info: 'bg-cyan-500/20 text-cyan-400', purple: 'bg-purple-500/20 text-purple-400' }; return <span className={`inline-flex items-center rounded-full font-medium px-2 py-0.5 text-xs ${variants[variant]}`}>{children}</span>; };
-const TypeBadge = ({ type }) => { const c = ITEM_TYPES[type] || ITEM_TYPES.feature; return <span className="px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: `${c.color}20`, color: c.color }}>{c.label}</span>; };
-const StatusBadge = ({ status, t }) => { const colors = { notStarted: 'default', inProgress: 'info', done: 'success', blocked: 'danger' }; return <Badge variant={colors[status] || 'default'}>{t.backlog[status] || status}</Badge>; };
-const Modal = ({ open, onClose, title, children, size = 'md' }) => { if (!open) return null; const sizes = { sm: 'max-w-md', md: 'max-w-lg', lg: 'max-w-2xl' }; return <div className="fixed inset-0 z-50 flex items-center justify-center p-4"><div className="absolute inset-0 bg-black/60" onClick={onClose} /><div className={`relative bg-slate-900 border border-slate-700 rounded-2xl w-full ${sizes[size]} max-h-[90vh] overflow-hidden`}><div className="flex items-center justify-between p-4 border-b border-slate-700"><h3 className="text-lg font-semibold text-white">{title}</h3><button onClick={onClose} className="p-1 hover:bg-slate-700 rounded-lg"><Icon name="x" /></button></div><div className="p-4 overflow-y-auto max-h-[calc(90vh-80px)]">{children}</div></div></div>; };
-const Stat = ({ label, value, color = 'cyan' }) => { const colors = { cyan: 'text-cyan-400', emerald: 'text-emerald-400', amber: 'text-amber-400', red: 'text-red-400', purple: 'text-purple-400' }; return <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4"><p className="text-xs text-slate-400 uppercase">{label}</p><p className={`text-2xl font-bold mt-1 ${colors[color]}`}>{value}</p></div>; };
+const ROLES={admin:{l:{pl:"Admin",en:"Admin"},color:"#C4704B"},user:{l:{pl:"Użytkownik",en:"User"},color:"#2563EB"},companion:{l:{pl:"Towarzysz",en:"Companion"},color:"#5F8B6A"},observer:{l:{pl:"Obserwator",en:"Observer"},color:"#A09486"}};
 
-const ItemDetailModal = ({ item, onClose }) => { const { t, items, teams, dependencies, updateItem, userRole } = useApp(); const [editedItem, setEditedItem] = useState({ ...item }); const canEdit = ROLES[userRole]?.canEdit; const team = teams.find(tm => tm.id === item.teamId); const parent = items.find(i => i.id === item.parentId); const children = items.filter(i => i.parentId === item.id); const relatedDeps = dependencies.filter(d => d.fromId === item.id || d.toId === item.id); const handleSave = () => { updateItem(item.id, editedItem); onClose(); }; return <Modal open={true} onClose={onClose} title={t.item.details} size="lg"><div className="space-y-4"><div className="flex items-start gap-4"><TypeBadge type={editedItem.type} /><div className="flex-1">{canEdit ? <input type="text" value={editedItem.name} onChange={e => setEditedItem({ ...editedItem, name: e.target.value })} className="text-xl font-semibold text-white bg-transparent border-none w-full" /> : <h2 className="text-xl font-semibold text-white">{item.name}</h2>}</div><StatusBadge status={editedItem.status} t={t} /></div><div className="grid grid-cols-4 gap-4"><div><label className="block text-xs text-slate-400 mb-1">{t.c.sp}</label>{canEdit ? <select value={editedItem.sp} onChange={e => setEditedItem({ ...editedItem, sp: parseInt(e.target.value) })} className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white">{(ITEM_TYPES[editedItem.type]?.sizes || [1,2,3,5,8,13,20,40]).map(sp => <option key={sp} value={sp}>{sp}</option>)}</select> : <p className="text-white font-medium">{item.sp} SP</p>}</div><div><label className="block text-xs text-slate-400 mb-1">{t.c.team}</label>{canEdit ? <select value={editedItem.teamId || ''} onChange={e => setEditedItem({ ...editedItem, teamId: e.target.value || null })} className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white"><option value="">—</option>{teams.map(tm => <option key={tm.id} value={tm.id}>{tm.name}</option>)}</select> : <p className="text-white">{team?.name || '—'}</p>}</div><div><label className="block text-xs text-slate-400 mb-1">{t.c.sprint}</label>{canEdit ? <select value={editedItem.sprint || ''} onChange={e => setEditedItem({ ...editedItem, sprint: e.target.value ? parseInt(e.target.value) : null })} className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white"><option value="">—</option>{[1,2,3,4,5].map(s => <option key={s} value={s}>Sprint {s}</option>)}</select> : <p className="text-white">{item.sprint ? `Sprint ${item.sprint}` : '—'}</p>}</div><div><label className="block text-xs text-slate-400 mb-1">{t.backlog.status}</label>{canEdit ? <select value={editedItem.status} onChange={e => setEditedItem({ ...editedItem, status: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white">{['notStarted', 'inProgress', 'done', 'blocked'].map(s => <option key={s} value={s}>{t.backlog[s]}</option>)}</select> : <StatusBadge status={item.status} t={t} />}</div></div><div><label className="block text-xs text-slate-400 mb-2">{t.backlog.description}</label>{canEdit ? <textarea value={editedItem.description || ''} onChange={e => setEditedItem({ ...editedItem, description: e.target.value })} rows={3} className="w-full px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white resize-none" /> : <p className="text-slate-300">{item.description || '—'}</p>}</div>{(parent || children.length > 0) && <div className="grid grid-cols-2 gap-4">{parent && <div><label className="block text-xs text-slate-400 mb-2">{t.item.parent}</label><div className="p-2 rounded-lg bg-slate-800/50 flex items-center gap-2"><TypeBadge type={parent.type} /><span className="text-white text-sm">{parent.name}</span></div></div>}{children.length > 0 && <div><label className="block text-xs text-slate-400 mb-2">{t.item.children}</label><div className="space-y-1">{children.map(c => <div key={c.id} className="p-2 rounded-lg bg-slate-800/50 flex items-center gap-2"><TypeBadge type={c.type} /><span className="text-white text-sm">{c.name}</span><Badge>{c.sp} SP</Badge></div>)}</div></div>}</div>}{relatedDeps.length > 0 && <div><label className="block text-xs text-slate-400 mb-2">{t.item.linkedDeps}</label><div className="space-y-2">{relatedDeps.map(dep => { const from = items.find(i => i.id === dep.fromId); const to = items.find(i => i.id === dep.toId); const isProvider = dep.fromId === item.id; return <div key={dep.id} className="p-2 rounded-lg bg-slate-800/50 flex items-center gap-2 text-sm"><Icon name="link" className="w-4 h-4 text-cyan-400" /><span className="text-slate-400">{isProvider ? 'Provides to:' : 'Depends on:'}</span><span className="text-white">{isProvider ? to?.name : from?.name}</span>{dep.crossART && <Badge variant="purple">Cross-ART</Badge>}</div>; })}</div></div>}{canEdit && <div className="flex justify-end gap-3 pt-4 border-t border-slate-700"><button onClick={onClose} className="px-4 py-2 text-slate-400">{t.c.cancel}</button><button onClick={handleSave} className="px-6 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-emerald-500 text-white">{t.c.save}</button></div>}</div></Modal>; };
+// ══ Demo users ══
+const USERS_INIT=[
+{id:"u1",name:"Bartek",email:"bartek@ventura.app",role:"admin",color:"#C4704B",photoUrl:"",social:{instagram:"@bartek_travels"},friends:["u2"],prefs:{currency:"PLN"}},
+{id:"u2",name:"Emilia",email:"emilia@ventura.app",role:"companion",color:"#5F8B6A",photoUrl:"",social:{instagram:"@emilia_adventures"},friends:["u1"],prefs:{currency:"PLN"}},
+{id:"u3",name:"Tomek",email:"tomek@ventura.app",role:"user",color:"#2563EB",photoUrl:"",social:{},friends:[],prefs:{currency:"PLN"}},
+{id:"u4",name:"Kasia",email:"kasia@ventura.app",role:"observer",color:"#7C5CFC",photoUrl:"",social:{},friends:[],prefs:{currency:"EUR"}}
+];
 
-const AuthScreen = ({ onDemo }) => { const [lang, setLang] = useState('pl'); const [role, setRole] = useState('rte'); const t = T[lang]; return <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4"><div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 w-full max-w-md"><div className="flex items-center justify-center gap-3 mb-8"><div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-cyan-500/20"><span className="text-3xl font-bold text-white">π</span></div><div><h1 className="text-2xl font-bold text-white">{t.app.title}</h1><p className="text-sm text-slate-400">{t.app.subtitle}</p></div></div><div className="flex gap-2 mb-6 justify-center"><button onClick={() => setLang('en')} className={`px-4 py-2 rounded-lg text-sm ${lang === 'en' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400'}`}>English</button><button onClick={() => setLang('pl')} className={`px-4 py-2 rounded-lg text-sm ${lang === 'pl' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400'}`}>Polski</button></div><div className="mb-6"><label className="block text-xs text-slate-400 uppercase mb-2">{t.auth.role}</label><select value={role} onChange={e => setRole(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white"><option value="admin">{t.auth.admin}</option><option value="rte">{t.auth.rte}</option><option value="teamLead">{t.auth.teamLead}</option><option value="member">{t.auth.member}</option><option value="viewer">{t.auth.viewer}</option></select></div><button onClick={() => onDemo(role, lang)} className="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 text-white font-semibold text-lg hover:shadow-lg hover:shadow-cyan-500/25 transition-all">{t.auth.demoMode}</button></div></div>; };
+// ══ Demo trips with coordinates ══
+const INIT_TRIPS=[{
+id:"t1",name:"Romania Discovery",dest:"Romania, Bucharest",dates:"2025-06-15 – 2025-06-19",travelers:["u1","u2"],observers:["u4"],days:4,status:"upcoming",currency:"RON",vacStatus:{u1:"approved",u2:"approved"},heroImg:"https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=800",budget:{total:4000},completeness:72,
+journal:[{id:"j1",date:"2025-05-10",author:"u1",type:"text",content:"Znalazłem świetne loty LOT za 450 PLN RT! 🎉"}],
+memories:null,
+dayData:[
+{day:1,date:"2025-06-15",title:"Old Town & Parliament",img:"https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=800",weather:{icon:"sun",hi:28,lo:17},
+steps:{u1:18420,u2:17850},
+items:[
+{id:"a1",time:"09:00",name:"Piata Revolutiei",desc:"Historical square",type:"sight",duration:"1.5h",cost:0,rating:4.5,votes:{u1:1,u2:1},fav:{u1:true},status:"approved",lat:44.4397,lng:26.0963},
+{id:"a2",time:"11:00",name:"National Art Museum",desc:"Romanian art collection",type:"museum",duration:"2h",cost:30,rating:4.7,votes:{u1:1,u2:1},fav:{},status:"approved",ticketBought:true,ticketUrl:"https://mfrn.ro/en/tickets",lat:44.4394,lng:26.0964},
+{id:"a3",time:"13:30",name:"Caru' cu Bere",desc:"Iconic Bucharest restaurant since 1879",type:"food",duration:"1.5h",cost:120,rating:4.6,votes:{u1:1,u2:1},fav:{u1:true,u2:true},status:"approved",lat:44.4316,lng:26.1018},
+{id:"a4",time:"15:30",name:"Palace of the Parliament",desc:"2nd largest building in the world",type:"sight",duration:"2h",cost:50,rating:4.8,votes:{u1:1,u2:1},fav:{u2:true},status:"approved",ticketBought:false,ticketUrl:"",lat:44.4275,lng:26.0877}
+]},
+{day:2,date:"2025-06-16",title:"Parks & Culture",weather:{icon:"cloud-sun",hi:26,lo:16},steps:{u1:22100,u2:21800},
+items:[
+{id:"a5",time:"09:30",name:"Herastrau Park",desc:"Beautiful lakeside park",type:"activity",duration:"2h",cost:0,rating:4.5,votes:{u1:1,u2:1},fav:{},status:"approved",lat:44.4711,lng:26.0802},
+{id:"a6",time:"12:00",name:"Village Museum",desc:"Open-air ethnographic museum",type:"museum",duration:"2h",cost:25,rating:4.7,votes:{u1:1},fav:{u1:true},status:"approved",lat:44.4725,lng:26.0764},
+{id:"a7",time:"14:30",name:"Obor Market",desc:"Authentic local market experience",type:"shopping",duration:"1h",cost:50,rating:4.2,votes:{u1:1,u2:1},fav:{},status:"approved",lat:44.4489,lng:26.1278},
+{id:"a8",time:"17:00",name:"Ateneul Roman",desc:"Romanian Athenaeum concert",type:"activity",duration:"2h",cost:80,rating:4.9,votes:{u1:1},fav:{u2:true},status:"pending",ticketBought:false,lat:44.4413,lng:26.0972}
+]},
+{day:3,date:"2025-06-17",title:"Castles & Mountains",weather:{icon:"sun",hi:24,lo:14},steps:{u1:14200,u2:13900},
+items:[
+{id:"a9",time:"07:00",name:"Drive to Sinaia",desc:"2h drive through Prahova Valley",type:"transport",duration:"2h",cost:0,rating:0,votes:{u1:1,u2:1},fav:{},status:"approved",lat:45.3517,lng:25.5514},
+{id:"a10",time:"09:30",name:"Castelul Peles",desc:"Stunning Neo-Renaissance castle",type:"sight",duration:"2.5h",cost:50,rating:4.9,votes:{u1:1,u2:1},fav:{u1:true,u2:true},status:"approved",ticketBought:true,ticketUrl:"https://peles.ro",lat:45.3600,lng:25.5425},
+{id:"a11",time:"13:00",name:"Lunch in Sinaia",desc:"Mountain cuisine",type:"food",duration:"1.5h",cost:100,rating:0,votes:{u1:1,u2:1},fav:{},status:"approved",lat:45.3487,lng:25.5500}
+]}],
+expenses:[
+{id:"e1",name:"LOT flights x2",cat:"Transport",amount:900,currency:"PLN",payer:"u1",date:"2025-05-08"},
+{id:"e2",name:"Airbnb Old Town 4 nights",cat:"Accommodation",amount:1200,currency:"RON",payer:"u2",date:"2025-05-15"},
+{id:"e3",name:"Caru cu Bere lunch",cat:"Food",amount:240,currency:"RON",payer:"u1",date:"2025-06-15"},
+{id:"e4",name:"Museum tickets x2",cat:"Activities",amount:60,currency:"RON",payer:"u2",date:"2025-06-15"},
+{id:"e5",name:"Bolt rides Day 1",cat:"Transport",amount:45,currency:"RON",payer:"u1",date:"2025-06-15"}
+],
+packing:{
+"Clothes":[{item:"T-shirts x4",qty:1,packed:true,assignedTo:"u1"},{item:"Shorts x3",qty:1,packed:true,assignedTo:"u1"},{item:"Dress x2",qty:1,packed:false,assignedTo:"u2"},{item:"Walking shoes",qty:1,packed:true,assignedTo:null}],
+"Tech":[{item:"Charger USB-C",qty:1,packed:true,assignedTo:null},{item:"Power bank",qty:1,packed:false,assignedTo:"u1"},{item:"Camera + lens",qty:1,packed:false,assignedTo:"u2"}],
+"Docs":[{item:"Passport",qty:2,packed:true,assignedTo:null},{item:"Travel insurance",qty:1,packed:false,assignedTo:"u1"},{item:"EHIC cards",qty:2,packed:true,assignedTo:null}]
+},
+deals:[{name:"Bucharest City Card",partner:"GetYourGuide",price:"€29",url:"https://getyourguide.com",pColor:"#FF5533"},{name:"Peles Castle Skip-the-line",partner:"Viator",price:"€15",url:"https://viator.com",pColor:"#00AA6C"}],
+comparisons:[
+{id:"c1",name:"Old Town Apartment",url:"https://airbnb.com/demo",source:"Airbnb",price:"300 RON/night",rating:4.8,notes:"Central, 2BR, balcony",pros:["Central","Kitchen","Balcony"],cons:["No parking","5th floor no lift"],proposedBy:"u1",votes:{u1:1,u2:1}},
+{id:"c2",name:"Hotel Novotel Centre",url:"https://booking.com/demo",source:"Booking.com",price:"420 RON/night",rating:4.3,notes:"Business hotel, good breakfast",pros:["Breakfast included","Parking","Gym"],cons:["Pricey","Generic"],proposedBy:"u2",votes:{u2:1}}
+],
+planningTips:[{icon:"🏨",title:{pl:"Nocleg",en:"Accommodation"},desc:{pl:"Airbnb zarezerwowany!",en:"Airbnb booked!"},done:true,priority:"high"},{icon:"✈️",title:{pl:"Loty",en:"Flights"},desc:{pl:"LOT 450 PLN RT",en:"LOT 450 PLN RT"},done:true,priority:"high"},{icon:"🗺️",title:{pl:"Plan dnia",en:"Itinerary"},desc:{pl:"3 dni zaplanowane",en:"3 days planned"},done:true,priority:"medium"},{icon:"🎒",title:{pl:"Pakowanie",en:"Packing"},desc:{pl:"Lista w trakcie",en:"List in progress"},done:false,priority:"low"}]
+},{
+id:"t2",name:"Sakura Season",dest:"Japan, Tokyo",dates:"2025-03-28 – 2025-04-04",travelers:["u1","u2","u3"],observers:[],days:7,status:"planning",currency:"JPY",vacStatus:{u1:"applied",u2:"not_applied",u3:"approved"},heroImg:"",budget:{total:500000},completeness:25,
+journal:[],memories:null,dayData:[],expenses:[],
+packing:{},deals:[],comparisons:[],
+planningTips:[{icon:"🏨",title:{pl:"Nocleg",en:"Accommodation"},desc:{pl:"Szukaj w Shinjuku/Shibuya",en:"Search in Shinjuku/Shibuya"},done:false,priority:"high"},{icon:"✈️",title:{pl:"Loty",en:"Flights"},desc:{pl:"Porównaj LOT vs ANA",en:"Compare LOT vs ANA"},done:false,priority:"high"},{icon:"🗺️",title:{pl:"Plan dnia",en:"Itinerary"},desc:{pl:"7 dni do zaplanowania",en:"7 days to plan"},done:false,priority:"medium"},{icon:"🎒",title:{pl:"Lista pakowania",en:"Packing list"},desc:{pl:"Użyj szablonu",en:"Use template"},done:false,priority:"low"}]
+}];
 
-const RTEDashboard = () => { const { t, teams, items, sprints } = useApp(); const stats = useMemo(() => { let totalCap = 0, totalDemand = 0, overbookedCount = 0; const teamStats = []; teams.forEach(team => { let teamCap = 0, teamDemand = 0, teamOverbooked = 0; sprints.forEach((sprint, idx) => { const cap = sprint.isIP ? team.velocity * 0.2 : team.velocity; const demand = items.filter(i => i.teamId === team.id && i.sprint === idx + 1).reduce((s, i) => s + (i.sp || 0), 0); teamCap += cap; teamDemand += demand; if (demand > cap) { teamOverbooked++; overbookedCount++; } }); teamStats.push({ ...team, capacity: teamCap, demand: teamDemand, load: teamCap > 0 ? teamDemand / teamCap : 0, overbooked: teamOverbooked }); totalCap += teamCap; totalDemand += teamDemand; }); const avgLoad = totalCap > 0 ? totalDemand / totalCap : 0; const avgConfidence = teams.reduce((s, tm) => s + (tm.confidence || 3), 0) / teams.length; const healthScore = Math.max(0, 100 - (overbookedCount * 10) - ((5 - avgConfidence) * 10)); return { totalCap, totalDemand, avgLoad, reserve: totalCap - totalDemand, overbookedCount, teamStats, avgConfidence, healthScore }; }, [teams, items, sprints]); const alerts = useMemo(() => { const notifs = []; stats.teamStats.forEach(team => { if (team.load > 1) notifs.push({ type: 'danger', title: `🔴 ${team.name}: Overcommit!`, message: `${(team.load * 100).toFixed(0)}% load` }); else if (team.load > 0.8) notifs.push({ type: 'warning', title: `🟡 ${team.name}: High load`, message: `${(team.load * 100).toFixed(0)}% load` }); }); return notifs; }, [stats]); return <div className="space-y-6"><div className="flex items-center justify-between"><div><h2 className="text-2xl font-bold text-white">{t.dash.title}</h2><p className="text-slate-400">{t.dash.subtitle}</p></div><div className={`px-6 py-3 rounded-2xl ${stats.healthScore >= 70 ? 'bg-emerald-500/20 border-emerald-500/50' : stats.healthScore >= 40 ? 'bg-amber-500/20 border-amber-500/50' : 'bg-red-500/20 border-red-500/50'} border`}><p className="text-xs opacity-70">{t.dash.healthScore}</p><p className={`text-3xl font-bold ${stats.healthScore >= 70 ? 'text-emerald-400' : stats.healthScore >= 40 ? 'text-amber-400' : 'text-red-400'}`}>{stats.healthScore.toFixed(0)}%</p></div></div>{alerts.length > 0 && <div className="space-y-2">{alerts.slice(0, 3).map((alert, i) => <div key={i} className={`p-3 rounded-lg ${alert.type === 'danger' ? 'bg-red-500/20 border border-red-500/50' : 'bg-amber-500/20 border border-amber-500/50'}`}><p className={alert.type === 'danger' ? 'text-red-400' : 'text-amber-400'}>{alert.title}</p><p className="text-sm text-slate-300">{alert.message}</p></div>)}</div>}<div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"><Stat label={t.dash.totalCapacity} value={`${stats.totalCap} SP`} color="cyan" /><Stat label={t.dash.totalDemand} value={`${stats.totalDemand} SP`} color="purple" /><Stat label={t.dash.avgLoad} value={`${(stats.avgLoad * 100).toFixed(0)}%`} color={stats.avgLoad > 1 ? 'red' : stats.avgLoad > 0.8 ? 'amber' : 'emerald'} /><Stat label={t.dash.reserve} value={`${stats.reserve} SP`} color={stats.reserve < 0 ? 'red' : 'emerald'} /><Stat label={t.dash.overbooked} value={stats.overbookedCount} color={stats.overbookedCount > 0 ? 'red' : 'emerald'} /><Stat label={t.risks.avgConfidence} value={`${stats.avgConfidence.toFixed(1)}/5`} color={stats.avgConfidence >= 3.5 ? 'emerald' : 'amber'} /></div><div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6"><h3 className="font-semibold text-white mb-4">{t.dash.teamBreakdown}</h3><div className="space-y-4">{stats.teamStats.map(team => { const color = getLoadColor(team.load); return <div key={team.id} className="flex items-center gap-4"><div className="w-28 flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: team.color }} /><span className="text-white text-sm">{team.name}</span></div><div className="flex-1"><div className="h-6 bg-slate-800 rounded-full overflow-hidden relative"><div className="h-full rounded-full" style={{ width: `${Math.min(team.load * 100, 100)}%`, backgroundColor: color.fill }} /><div className="absolute inset-0 flex items-center justify-between px-3"><span className="text-xs text-white">{team.demand}/{team.capacity} SP</span><span className={`text-xs font-bold ${color.text}`}>{(team.load * 100).toFixed(0)}%</span></div></div></div><div className="w-24">{team.overbooked > 0 ? <Badge variant="danger">{team.overbooked} over</Badge> : <Badge variant="success">{t.dash.onTrack}</Badge>}</div></div>; })}</div></div></div>; };
+// ══ Packing templates & suggestions ══
+const PACK_TPL=[
+{id:"summer",icon:"☀️",name:{pl:"Lato",en:"Summer"},items:{"Clothes":[{item:"T-shirts x5",qty:1},{item:"Shorts x3",qty:1},{item:"Swimsuit",qty:1},{item:"Sunglasses",qty:1},{item:"Hat",qty:1}],"Hygiene":[{item:"Sunscreen SPF50",qty:1},{item:"Toothbrush",qty:1},{item:"Deodorant",qty:1}]}},
+{id:"winter",icon:"❄️",name:{pl:"Zima",en:"Winter"},items:{"Clothes":[{item:"Warm jacket",qty:1},{item:"Thermal layers x3",qty:1},{item:"Scarf + gloves",qty:1},{item:"Warm boots",qty:1}],"Hygiene":[{item:"Lip balm",qty:1},{item:"Hand cream",qty:1}]}},
+{id:"business",icon:"💼",name:{pl:"Służbowy",en:"Business"},items:{"Clothes":[{item:"Suits x2",qty:1},{item:"Dress shirts x3",qty:1},{item:"Dress shoes",qty:1},{item:"Tie",qty:1}],"Tech":[{item:"Laptop + charger",qty:1},{item:"Presentation remote",qty:1}]}},
+{id:"backpack",icon:"🎒",name:{pl:"Plecak",en:"Backpack"},items:{"Gear":[{item:"Backpack 40L",qty:1},{item:"Rain cover",qty:1},{item:"Quick-dry towel",qty:1},{item:"Headlamp",qty:1}],"Clothes":[{item:"Merino t-shirts x3",qty:1},{item:"Hiking pants x2",qty:1},{item:"Trail shoes",qty:1}]}}
+];
+const AI_SUGG=["Universal adapter","Reusable water bottle","Packing cubes","First aid kit","Portable charger","Neck pillow","Earplugs","Eye mask","Zip-lock bags","Snacks"];
+const DONT_FORGET={pl:["📱 Ładowarka i power bank","💊 Leki (jeśli potrzebujesz)","📋 Kopie dokumentów (cyfrowe)","💳 Powiadom bank o podróży","🔑 Klucze u zaufanej osoby"],en:["📱 Charger and power bank","💊 Medications (if needed)","📋 Document copies (digital)","💳 Notify bank of travel","🔑 Keys with trusted person"]};
 
-const CapacityBoard = () => { const { t, teams, items, sprints, absences, updateItem, setSelectedItem } = useApp(); const [draggedItem, setDraggedItem] = useState(null); const capacityData = useMemo(() => { const data = {}; teams.forEach(team => { data[team.id] = {}; sprints.forEach((sprint, idx) => { const sprintNum = idx + 1; let effectiveDays = 0; team.members?.forEach(member => { const absKey = `${team.id}-${member.id}-${sprintNum}`; const absDays = absences[absKey] || 0; effectiveDays += (sprint.workDays - absDays) * member.fte; }); const baseCap = sprint.isIP ? team.velocity * 0.2 : team.velocity; const cap = team.members?.length > 0 ? Math.round(baseCap * (effectiveDays / (sprint.workDays * team.members.length))) : baseCap; const demand = items.filter(i => i.teamId === team.id && i.sprint === sprintNum).reduce((s, i) => s + (i.sp || 0), 0); data[team.id][sprintNum] = { capacity: cap, demand, load: cap > 0 ? demand / cap : 0, items: items.filter(i => i.teamId === team.id && i.sprint === sprintNum) }; }); }); return data; }, [teams, items, sprints, absences]); const unassigned = items.filter(i => (!i.teamId || !i.sprint) && i.type !== 'epic'); return <div className="space-y-6"><h2 className="text-2xl font-bold text-white">{t.cap.title}</h2><div className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-x-auto"><table className="w-full min-w-[900px]"><thead><tr className="bg-slate-900"><th className="px-4 py-3 text-left text-xs text-slate-400 uppercase w-44 sticky left-0 bg-slate-900 z-10">{t.c.team}</th>{sprints.map((s, i) => <th key={i} className="px-2 py-3 text-center text-xs text-slate-400 uppercase min-w-[140px]"><span className={s.isIP ? 'text-purple-400' : ''}>{s.name}</span></th>)}<th className="px-4 py-3 text-center text-xs text-slate-400 uppercase w-28">{t.c.total}</th></tr></thead><tbody className="divide-y divide-slate-800">{teams.map(team => { const teamTotal = { cap: 0, demand: 0 }; return <tr key={team.id}><td className="px-4 py-3 sticky left-0 bg-slate-900/95 z-10"><div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: team.color }} /><div><span className="text-white font-medium">{team.name}</span><p className="text-xs text-slate-500">{team.velocity} SP</p></div></div></td>{sprints.map((sprint, idx) => { const cell = capacityData[team.id]?.[idx + 1] || { capacity: 0, demand: 0, load: 0, items: [] }; teamTotal.cap += cell.capacity; teamTotal.demand += cell.demand; const color = getLoadColor(cell.load); return <td key={idx} className="px-2 py-2" onDragOver={e => e.preventDefault()} onDrop={() => { if (draggedItem) { updateItem(draggedItem.id, { teamId: team.id, sprint: idx + 1 }); setDraggedItem(null); } }}><div className={`p-2 rounded-xl ${color.bg} ${color.border} border min-h-[100px] transition-all ${draggedItem ? 'ring-2 ring-cyan-500/30' : ''}`}><div className="flex justify-between text-sm mb-1"><span className={`font-bold ${color.text}`}>{cell.demand}/{cell.capacity}</span><span className={color.text}>{(cell.load * 100).toFixed(0)}%</span></div><div className="h-1.5 bg-slate-800 rounded-full overflow-hidden mb-2"><div className="h-full rounded-full" style={{ width: `${Math.min(cell.load * 100, 100)}%`, backgroundColor: color.fill }} /></div><div className="space-y-1">{cell.items.map(item => <div key={item.id} draggable onDragStart={() => setDraggedItem(item)} onClick={() => setSelectedItem(item)} className="p-1.5 rounded bg-slate-800/60 hover:bg-slate-700/60 cursor-pointer flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ITEM_TYPES[item.type]?.color }} /><span className="text-xs text-white truncate flex-1">{item.name}</span><span className="text-xs text-slate-400">{item.sp}</span></div>)}</div></div></td>; })}<td className="px-4 py-3"><div className={`p-2 rounded-xl text-center ${getLoadColor(teamTotal.cap > 0 ? teamTotal.demand / teamTotal.cap : 0).bg}`}><p className={`font-bold ${getLoadColor(teamTotal.cap > 0 ? teamTotal.demand / teamTotal.cap : 0).text}`}>{teamTotal.demand}/{teamTotal.cap}</p></div></td></tr>; })}</tbody></table></div><div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4"><h3 className="text-sm font-medium text-slate-400 mb-3">{t.cap.unplanned} ({unassigned.length})</h3><div className="flex flex-wrap gap-2">{unassigned.map(item => <div key={item.id} draggable onDragStart={() => setDraggedItem(item)} onClick={() => setSelectedItem(item)} className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 cursor-pointer flex items-center gap-2"><TypeBadge type={item.type} /><span className="text-white text-sm">{item.name}</span><Badge variant="info">{item.sp} SP</Badge></div>)}{unassigned.length === 0 && <p className="text-slate-500 text-sm">✓ All assigned</p>}</div></div></div>; };
+// ═══════════════ UI COMPONENTS ═══════════════
+const WI=({t})=>{const m={sun:"☀️","cloud-sun":"⛅",cloud:"☁️",rain:"🌧️",snow:"❄️"};return<span>{m[t]||"🌤️"}</span>};
+const Pill=({children,active,onClick,small})=><button onClick={onClick} style={{padding:small?"4px 10px":"8px 16px",borderRadius:99,fontSize:small?11:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",border:`1.5px solid ${active?C.primary:C.border}`,background:active?C.primaryLight:"transparent",color:active?C.primary:C.textSec,transition:"all 0.2s"}}>{children}</button>;
+const Card=({children,style:sx,onClick,hover=true,...rest})=><div onClick={onClick} {...rest} style={{background:C.white,borderRadius:16,border:`1px solid ${C.borderLight}`,boxShadow:C.shadow,transition:"all 0.2s",cursor:onClick?"pointer":"default",...sx}} onMouseEnter={e=>{if(hover&&onClick){e.currentTarget.style.boxShadow=C.shadowMd;e.currentTarget.style.transform="translateY(-1px)"}}} onMouseLeave={e=>{if(hover&&onClick){e.currentTarget.style.boxShadow=C.shadow;e.currentTarget.style.transform="translateY(0)"}}}>{children}</div>;
+const Bar=({v,mx,color=C.primary,h=6})=><div style={{width:"100%",height:h,background:C.bgAlt,borderRadius:h,overflow:"hidden"}}><div style={{width:`${Math.min(v/mx*100,100)}%`,height:h,borderRadius:h,background:v>mx?C.danger:color,transition:"width 0.6s"}}/></div>;
+const Av=({user,size=32,onClick})=>{const s={width:size,height:size,borderRadius:"50%",objectFit:"cover",flexShrink:0,cursor:onClick?"pointer":"default"};if(user?.photoUrl)return<img src={user.photoUrl} alt="" onClick={onClick} style={{...s,border:`2px solid ${user.color||C.border}`}}/>;return<div onClick={onClick} style={{...s,background:user?.color||C.textDim,display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.4,fontWeight:700,color:"#fff"}}>{(user?.name||"?")[0]}</div>};
+const Img=({src,alt,style:sx})=>{const[e,sE]=useState(false);if(e)return<div style={{...sx,background:`linear-gradient(135deg,${C.primaryLight},${C.blueLight})`,display:"flex",alignItems:"center",justifyContent:"center",color:C.textDim}}>🗺️</div>;return<img src={src} alt={alt||""} style={{objectFit:"cover",display:"block",...sx}} onError={()=>sE(true)}/>};
+const Modal=({open,onClose,title,children,wide})=>{if(!open)return null;return(<div style={{position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={onClose}><div style={{position:"absolute",inset:0,background:"rgba(44,24,16,0.4)",backdropFilter:"blur(4px)"}}/><div onClick={e=>e.stopPropagation()} style={{position:"relative",background:C.white,borderRadius:20,boxShadow:C.shadowMd,width:"100%",maxWidth:wide?600:480,maxHeight:"85vh",overflow:"auto",animation:"fadeUp 0.25s ease"}}><div style={{padding:"16px 20px",borderBottom:`1px solid ${C.borderLight}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,background:C.white,zIndex:1,borderRadius:"20px 20px 0 0"}}><span style={{fontSize:16,fontWeight:700,fontFamily:Fn}}>{title}</span><button onClick={onClose} style={{width:28,height:28,borderRadius:8,background:C.bgAlt,border:"none",cursor:"pointer",fontSize:14,color:C.textDim}}>✕</button></div><div style={{padding:20}}>{children}</div></div></div>)};
+const Pie=({data,size=140,currency})=>{let tot=data.reduce((s,d)=>s+d.value,0);if(!tot)return null;let cum=0;const sl=data.map(d=>{const st=cum/tot*360;cum+=d.value;return{...d,st,en:cum/tot*360}});const xy=(a,r)=>({x:50+r*Math.cos((a-90)*Math.PI/180),y:50+r*Math.sin((a-90)*Math.PI/180)});return(<svg viewBox="0 0 100 100" width={size} height={size}>{sl.map((s,i)=>{const lg=(s.en-s.st)>180?1:0;const p1=xy(s.st,42),p2=xy(s.en,42);if(s.en-s.st>=359.9)return<circle key={i} cx="50" cy="50" r="42" fill={s.color}/>;return<path key={i} d={`M50,50 L${p1.x},${p1.y} A42,42 0 ${lg},1 ${p2.x},${p2.y} Z`} fill={s.color}/>})}<circle cx="50" cy="50" r="26" fill={C.white}/><text x="50" y="47" textAnchor="middle" fontSize="8" fontWeight="800" fill={C.text}>{fmt(tot)}</text><text x="50" y="56" textAnchor="middle" fontSize="5" fill={C.textDim}>{currency}</text></svg>)};
+const PhotoSlider=({dest})=>{const photos=DEST_PHOTOS[dest]||[];const[idx,setIdx]=useState(0);useEffect(()=>{if(photos.length<2)return;const i=setInterval(()=>setIdx(p=>(p+1)%photos.length),4500);return()=>clearInterval(i)},[photos.length]);if(!photos.length)return<div style={{height:150,background:`linear-gradient(135deg,${C.primaryLight},${C.blueLight})`,borderRadius:"0 0 16px 16px"}}/>;return(<div style={{position:"relative",height:150,overflow:"hidden",borderRadius:"0 0 16px 16px"}}>{photos.map((p,i)=><img key={i} src={p} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",transition:"opacity 0.8s",opacity:i===idx?1:0}}/>)}<div style={{position:"absolute",inset:0,background:"linear-gradient(0deg,rgba(44,24,16,0.5) 0%,transparent 50%)"}}/><div style={{position:"absolute",bottom:8,left:0,right:0,display:"flex",justifyContent:"center",gap:5}}>{photos.map((_,i)=><div key={i} onClick={e=>{e.stopPropagation();setIdx(i)}} style={{width:i===idx?16:6,height:6,borderRadius:3,background:i===idx?"#fff":"rgba(255,255,255,0.5)",transition:"all 0.3s",cursor:"pointer"}}/>)}</div></div>)};
 
-const BacklogView = () => { const { t, items, teams, addItem, deleteItem, userRole, setSelectedItem } = useApp(); const [newItem, setNewItem] = useState({ type: 'feature', name: '', sp: 20 }); const [filter, setFilter] = useState('all'); const canEdit = ROLES[userRole]?.canEdit; const filteredItems = filter === 'all' ? items : filter === 'unassigned' ? items.filter(i => !i.teamId) : items.filter(i => i.type === filter); const handleAdd = () => { if (!newItem.name) return; addItem({ ...newItem, id: uid(), status: 'notStarted' }); setNewItem({ type: 'feature', name: '', sp: 20 }); }; return <div className="space-y-6"><h2 className="text-2xl font-bold text-white">{t.backlog.title}</h2>{canEdit && <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 flex gap-2 flex-wrap"><select value={newItem.type} onChange={e => setNewItem({ ...newItem, type: e.target.value, sp: ITEM_TYPES[e.target.value]?.sizes?.[1] || 20 })} className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm">{Object.entries(ITEM_TYPES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select><input type="text" value={newItem.name} onChange={e => setNewItem({ ...newItem, name: e.target.value })} onKeyDown={e => e.key === 'Enter' && handleAdd()} placeholder={t.backlog.name} className="flex-1 min-w-[200px] px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white" /><select value={newItem.sp} onChange={e => setNewItem({ ...newItem, sp: parseInt(e.target.value) })} className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm w-24">{(ITEM_TYPES[newItem.type]?.sizes || [1,2,3,5,8,13,20,40]).map(sp => <option key={sp} value={sp}>{sp} SP</option>)}</select><button onClick={handleAdd} className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-emerald-500 text-white"><Icon name="plus" className="w-5 h-5" /></button></div>}<div className="flex gap-2 flex-wrap">{['all', 'unassigned', 'epic', 'feature', 'story', 'enabler'].map(f => <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-lg text-sm ${filter === f ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:text-white'}`}>{f === 'all' ? 'All' : f === 'unassigned' ? t.backlog.unassigned : ITEM_TYPES[f]?.label || f}</button>)}</div><div className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden"><table className="w-full"><thead><tr className="bg-slate-900 text-xs uppercase text-slate-400"><th className="px-4 py-3 text-left">Type</th><th className="px-4 py-3 text-left">{t.backlog.name}</th><th className="px-4 py-3 text-center">{t.c.sp}</th><th className="px-4 py-3 text-center">{t.backlog.status}</th><th className="px-4 py-3 text-center">{t.c.team}</th><th className="px-4 py-3 text-center">{t.c.sprint}</th><th className="px-4 py-3"></th></tr></thead><tbody className="divide-y divide-slate-800">{filteredItems.map(item => <tr key={item.id} onClick={() => setSelectedItem(item)} className="hover:bg-slate-800/30 cursor-pointer"><td className="px-4 py-3"><TypeBadge type={item.type} /></td><td className="px-4 py-3 text-white font-medium">{item.name}</td><td className="px-4 py-3 text-center"><Badge variant="info">{item.sp}</Badge></td><td className="px-4 py-3 text-center"><StatusBadge status={item.status} t={t} /></td><td className="px-4 py-3 text-center">{teams.find(tm => tm.id === item.teamId)?.name || '—'}</td><td className="px-4 py-3 text-center">{item.sprint ? `S${item.sprint}` : '—'}</td><td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>{canEdit && <button onClick={() => deleteItem(item.id)} className="p-1 hover:bg-red-500/20 rounded text-slate-400 hover:text-red-400"><Icon name="trash" className="w-4 h-4" /></button>}</td></tr>)}</tbody></table></div></div>; };
+// ═══════════════ MAP COMPONENT ═══════════════
+const TripMap=({trip,lang,getU})=>{
+  const mapRef=useRef(null);
+  const mapInstance=useRef(null);
+  const markersRef=useRef([]);
+  const allItems=(trip?.dayData||[]).flatMap((d,dI)=>d.items.filter(it=>it.lat&&it.lng).map(it=>({...it,dayNum:d.day,dayTitle:d.title,dayColor:["#C4704B","#2563EB","#5F8B6A","#7C5CFC","#D4A853","#E8734A","#FF6B9D"][dI%7]})));
+  
+  useEffect(()=>{
+    if(!mapRef.current||allItems.length===0)return;
+    let map=mapInstance.current;
+    const center=getDestCoords(trip.dest);
+    
+    const initMap=async()=>{
+      try{
+        const mgl=await import("maplibre-gl");
+        if(mapInstance.current){mapInstance.current.remove();mapInstance.current=null}
+        map=new mgl.Map({
+          container:mapRef.current,
+          style:"https://tiles.openfreemap.org/styles/liberty",
+          center:[center.lng,center.lat],
+          zoom:12,
+          attributionControl:false
+        });
+        map.addControl(new mgl.NavigationControl(),"top-right");
+        map.addControl(new mgl.AttributionControl({compact:true}));
+        
+        map.on("load",()=>{
+          // Clear old markers
+          markersRef.current.forEach(m=>m.remove());
+          markersRef.current=[];
+          
+          // Add markers for each activity
+          allItems.forEach((it,i)=>{
+            const el=document.createElement("div");
+            el.innerHTML=`<div style="width:28px;height:28px;border-radius:50%;background:${it.dayColor};border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer" title="${it.name}">${tE[it.type]||"📍"}</div>`;
+            const popup=new mgl.Popup({offset:20}).setHTML(
+              `<div style="font-family:'Nunito Sans',sans-serif;padding:4px"><strong style="font-size:13px">${it.name}</strong><br/><span style="font-size:11px;color:#6B5B4F">${lang==="pl"?"Dzień":"Day"} ${it.dayNum} · ${it.time||""} · ${it.cost>0?it.cost+" "+trip.currency:lang==="pl"?"Bezpłatne":"Free"}</span></div>`
+            );
+            const marker=new mgl.Marker({element:el}).setLngLat([it.lng,it.lat]).setPopup(popup).addTo(map);
+            markersRef.current.push(marker);
+          });
+          
+          // Draw route lines per day
+          const dayGroups={};
+          allItems.forEach(it=>{if(!dayGroups[it.dayNum])dayGroups[it.dayNum]=[];dayGroups[it.dayNum].push([it.lng,it.lat])});
+          Object.entries(dayGroups).forEach(([day,coords])=>{
+            if(coords.length<2)return;
+            const srcId=`route-${day}`;
+            const color=allItems.find(it=>it.dayNum===parseInt(day))?.dayColor||C.primary;
+            if(map.getSource(srcId))return;
+            map.addSource(srcId,{type:"geojson",data:{type:"Feature",geometry:{type:"LineString",coordinates:coords}}});
+            map.addLayer({id:srcId,type:"line",source:srcId,paint:{"line-color":color,"line-width":3,"line-opacity":0.6,"line-dasharray":[2,2]}});
+          });
+          
+          // Fit bounds
+          if(allItems.length>1){
+            const bounds=allItems.reduce((b,it)=>{b[0][0]=Math.min(b[0][0],it.lng);b[0][1]=Math.min(b[0][1],it.lat);b[1][0]=Math.max(b[1][0],it.lng);b[1][1]=Math.max(b[1][1],it.lat);return b},[[Infinity,Infinity],[-Infinity,-Infinity]]);
+            map.fitBounds(bounds,{padding:50,maxZoom:14});
+          }
+        });
+        mapInstance.current=map;
+      }catch(err){console.warn("MapLibre not available:",err)}
+    };
+    initMap();
+    return()=>{mapInstance.current?.remove();mapInstance.current=null;markersRef.current=[]};
+  },[trip?.id,allItems.length]);
 
-const TeamsView = () => { const { t, teams, sprints, absences, updateTeam, addTeam, deleteTeam, updateAbsence, userRole } = useApp(); const [newTeam, setNewTeam] = useState({ name: '', color: '#22d3ee', velocity: 40 }); const canEdit = ROLES[userRole]?.canEdit; return <div className="space-y-6"><h2 className="text-2xl font-bold text-white">{t.teams.title}</h2><div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4"><h3 className="text-sm font-medium text-slate-400 mb-2">{t.teams.holidays} 2025</h3><div className="flex flex-wrap gap-2">{HOLIDAYS_2025.map((h, i) => <span key={i} className="px-2 py-1 rounded bg-amber-500/10 text-amber-400 text-xs">{h.date.slice(5)} {h.name}</span>)}</div></div>{teams.map(team => <div key={team.id} className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden"><div className="p-4 border-b border-slate-800 flex items-center gap-4"><input type="color" value={team.color} onChange={e => canEdit && updateTeam(team.id, { color: e.target.value })} disabled={!canEdit} className="w-10 h-10 rounded-lg" /><input type="text" value={team.name} onChange={e => canEdit && updateTeam(team.id, { name: e.target.value })} disabled={!canEdit} className="text-lg font-semibold text-white bg-transparent border-none flex-1" /><div className="flex items-center gap-2"><span className="text-slate-400 text-sm">{t.teams.velocity}:</span><input type="number" value={team.velocity} onChange={e => canEdit && updateTeam(team.id, { velocity: parseInt(e.target.value) })} disabled={!canEdit} className="w-20 px-3 py-1 rounded-lg bg-slate-800 border border-slate-700 text-white text-center" /></div>{canEdit && <button onClick={() => deleteTeam(team.id)} className="p-2 hover:bg-red-500/20 rounded-lg text-slate-400 hover:text-red-400"><Icon name="trash" /></button>}</div><div className="p-4"><h4 className="text-sm text-slate-400 mb-2">{t.teams.absences}</h4><table className="w-full text-sm"><thead><tr className="text-slate-400"><th className="text-left py-1 w-40">Member</th><th className="text-center py-1 w-16">FTE</th>{sprints.map((s, i) => <th key={i} className="text-center py-1 w-16">{s.name}</th>)}</tr></thead><tbody>{team.members?.map(m => <tr key={m.id}><td className="py-1 text-white">{m.name}</td><td className="py-1 text-center text-slate-400">{m.fte}</td>{sprints.map((s, i) => <td key={i} className="text-center py-1"><input type="number" value={absences[`${team.id}-${m.id}-${i + 1}`] || 0} onChange={e => canEdit && updateAbsence(team.id, m.id, i + 1, parseInt(e.target.value) || 0)} disabled={!canEdit} min="0" max={s.workDays} className="w-12 px-2 py-1 rounded bg-slate-800 text-white text-center text-sm border border-slate-700" /></td>)}</tr>)}</tbody></table></div></div>)}{canEdit && <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 flex gap-2"><input type="text" value={newTeam.name} onChange={e => setNewTeam({ ...newTeam, name: e.target.value })} placeholder={t.teams.teamName} className="flex-1 px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white" /><input type="color" value={newTeam.color} onChange={e => setNewTeam({ ...newTeam, color: e.target.value })} className="w-10 h-10 rounded-lg" /><input type="number" value={newTeam.velocity} onChange={e => setNewTeam({ ...newTeam, velocity: parseInt(e.target.value) })} className="w-20 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-center" /><button onClick={() => { if (newTeam.name) { addTeam({ ...newTeam, id: uid(), members: [], confidence: 3, historicalVelocity: [newTeam.velocity] }); setNewTeam({ name: '', color: '#22d3ee', velocity: 40 }); } }} className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-emerald-500 text-white">{t.c.add}</button></div>}</div>; };
-
-const ProgramBoard = () => { const { t, teams, items, sprints, milestones, dependencies, setSelectedItem } = useApp(); const features = items.filter(i => i.type === 'feature' || i.type === 'enabler'); return <div className="space-y-6"><h2 className="text-2xl font-bold text-white">{t.program.title}</h2><div className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-x-auto"><div className="min-w-[900px]"><div className="flex border-b border-slate-700"><div className="w-36 shrink-0 p-3 bg-slate-900" />{sprints.map((s, i) => <div key={i} className="flex-1 min-w-[140px] p-3 text-center border-l border-slate-700"><p className={`font-semibold ${s.isIP ? 'text-purple-400' : 'text-white'}`}>{s.name}</p><div className="flex flex-wrap justify-center gap-1 mt-1">{milestones.filter(m => m.sprint === i + 1).map(m => <span key={m.id} className="px-2 py-0.5 rounded text-xs" style={{ backgroundColor: `${m.color}20`, color: m.color }}>◆ {m.name}</span>)}</div></div>)}</div>{teams.map(team => <div key={team.id} className="flex border-b border-slate-700"><div className="w-36 shrink-0 p-3 bg-slate-900/50 flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: team.color }} /><span className="text-white text-sm">{team.name}</span></div>{sprints.map((s, i) => { const sprintItems = features.filter(f => f.teamId === team.id && f.sprint === i + 1); return <div key={i} className="flex-1 min-w-[140px] p-2 border-l border-slate-700">{sprintItems.map(item => { const hasDep = dependencies.some(d => d.fromId === item.id || d.toId === item.id); return <div key={item.id} onClick={() => setSelectedItem(item)} className={`p-2 mb-1 rounded text-xs cursor-pointer hover:bg-slate-700/50 ${hasDep ? 'bg-cyan-500/10 border border-cyan-500/30' : 'bg-slate-800/50'}`}>{hasDep && <span className="text-cyan-400 mr-1">⛓</span>}<span className="text-white">{item.name}</span><span className="text-slate-400 ml-1">{item.sp}</span></div>; })}</div>; })}</div>)}</div></div></div>; };
-
-const DependenciesView = () => { const { t, teams, items, dependencies, addDependency, deleteDependency, setSelectedItem } = useApp(); const [showAdd, setShowAdd] = useState(false); const [newDep, setNewDep] = useState({ fromId: '', toId: '', description: '' }); const features = items.filter(i => i.type === 'feature' || i.type === 'enabler'); const analyzed = dependencies.map(dep => { const from = items.find(i => i.id === dep.fromId); const to = items.find(i => i.id === dep.toId); let status = 'healthy'; if (from?.sprint >= to?.sprint && from?.sprint && to?.sprint) status = 'violated'; else if (from?.sprint === to?.sprint - 1) status = 'atRisk'; return { ...dep, from, to, fromTeam: teams.find(tm => tm.id === from?.teamId), toTeam: teams.find(tm => tm.id === to?.teamId), status }; }); return <div className="space-y-6"><div className="flex items-center justify-between"><h2 className="text-2xl font-bold text-white">{t.deps.title}</h2><button onClick={() => setShowAdd(true)} className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 text-white flex items-center gap-2"><Icon name="plus" className="w-5 h-5" /> {t.deps.add}</button></div><div className="grid grid-cols-3 gap-4"><div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4"><p className="text-xs text-emerald-400 uppercase">{t.deps.healthy}</p><p className="text-2xl font-bold text-emerald-400">{analyzed.filter(d => d.status === 'healthy').length}</p></div><div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4"><p className="text-xs text-amber-400 uppercase">{t.deps.atRisk}</p><p className="text-2xl font-bold text-amber-400">{analyzed.filter(d => d.status === 'atRisk').length}</p></div><div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4"><p className="text-xs text-red-400 uppercase">{t.deps.violated}</p><p className="text-2xl font-bold text-red-400">{analyzed.filter(d => d.status === 'violated').length}</p></div></div><div className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden"><table className="w-full"><thead><tr className="bg-slate-900 text-xs uppercase text-slate-400"><th className="px-4 py-3 text-left">{t.deps.provider}</th><th className="px-4 py-3 text-center">→</th><th className="px-4 py-3 text-left">{t.deps.consumer}</th><th className="px-4 py-3 text-center">Status</th><th className="px-4 py-3"></th></tr></thead><tbody className="divide-y divide-slate-800">{analyzed.map(dep => <tr key={dep.id} className={dep.status === 'violated' ? 'bg-red-500/5' : dep.status === 'atRisk' ? 'bg-amber-500/5' : ''}><td className="px-4 py-3 cursor-pointer" onClick={() => setSelectedItem(dep.from)}><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: dep.fromTeam?.color }} /><div><p className="text-white text-sm">{dep.from?.name}</p><p className="text-xs text-slate-400">{dep.fromTeam?.name} • S{dep.from?.sprint}</p></div></div></td><td className="px-4 py-3 text-center text-slate-400">→</td><td className="px-4 py-3 cursor-pointer" onClick={() => setSelectedItem(dep.to)}><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: dep.toTeam?.color }} /><div><p className="text-white text-sm">{dep.to?.name}</p><p className="text-xs text-slate-400">{dep.toTeam?.name} • S{dep.to?.sprint}</p></div></div></td><td className="px-4 py-3 text-center"><Badge variant={dep.status === 'healthy' ? 'success' : dep.status === 'atRisk' ? 'warning' : 'danger'}>{t.deps[dep.status]}</Badge></td><td className="px-4 py-3"><button onClick={() => deleteDependency(dep.id)} className="p-1 hover:bg-red-500/20 rounded text-slate-400 hover:text-red-400"><Icon name="trash" className="w-4 h-4" /></button></td></tr>)}</tbody></table></div><Modal open={showAdd} onClose={() => setShowAdd(false)} title={t.deps.add}><div className="space-y-4"><div><label className="block text-xs text-slate-400 mb-1">{t.deps.provider}</label><select value={newDep.fromId} onChange={e => setNewDep({ ...newDep, fromId: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white"><option value="">Select...</option>{features.filter(f => f.teamId && f.sprint).map(f => <option key={f.id} value={f.id}>{f.name} ({teams.find(tm => tm.id === f.teamId)?.name} S{f.sprint})</option>)}</select></div><div><label className="block text-xs text-slate-400 mb-1">{t.deps.consumer}</label><select value={newDep.toId} onChange={e => setNewDep({ ...newDep, toId: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white"><option value="">Select...</option>{features.filter(f => f.teamId && f.sprint).map(f => <option key={f.id} value={f.id}>{f.name} ({teams.find(tm => tm.id === f.teamId)?.name} S{f.sprint})</option>)}</select></div><div className="flex justify-end gap-3 pt-4"><button onClick={() => setShowAdd(false)} className="px-4 py-2 text-slate-400">{t.c.cancel}</button><button onClick={() => { if (newDep.fromId && newDep.toId) { addDependency({ ...newDep, id: uid() }); setNewDep({ fromId: '', toId: '', description: '' }); setShowAdd(false); } }} className="px-6 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-emerald-500 text-white">{t.c.add}</button></div></div></Modal></div>; };
-
-const WhatIfView = () => { const { t, teams, items, sprints } = useApp(); const [scenarios] = useState([{ id: 'baseline', name: t.whatif.baseline, adjustments: [], isBaseline: true }, { id: 'a', name: t.whatif.scenarioA, adjustments: [{ type: 'reduceCapacity', teamId: 'team2', value: 20 }] }, { id: 'b', name: t.whatif.scenarioB, adjustments: [{ type: 'addTeam', name: 'Team Delta+', velocity: 25 }] }]); const calculate = (scenario) => { let sTeams = [...teams]; scenario.adjustments.forEach(adj => { if (adj.type === 'reduceCapacity') sTeams = sTeams.map(tm => tm.id === adj.teamId ? { ...tm, velocity: Math.round(tm.velocity * (1 - adj.value / 100)) } : tm); else if (adj.type === 'addTeam') sTeams = [...sTeams, { id: uid(), name: adj.name, velocity: adj.velocity, members: [] }]; }); let cap = 0, demand = 0, over = 0; sTeams.forEach(team => sprints.forEach((sp, idx) => { const c = sp.isIP ? team.velocity * 0.2 : team.velocity; const d = items.filter(i => i.teamId === team.id && i.sprint === idx + 1).reduce((s, i) => s + (i.sp || 0), 0); cap += c; demand += d; if (d > c) over++; })); return { cap, demand, load: cap > 0 ? demand / cap : 0, over, reserve: cap - demand }; }; const results = scenarios.map(s => ({ ...s, r: calculate(s) })); const baseline = results.find(s => s.isBaseline)?.r || { cap: 0, demand: 0, load: 0, over: 0, reserve: 0 }; return <div className="space-y-6"><h2 className="text-2xl font-bold text-white">{t.whatif.title}</h2><div className="grid grid-cols-1 md:grid-cols-3 gap-6">{results.map(s => { const delta = { load: ((s.r.load - baseline.load) * 100).toFixed(1), reserve: s.r.reserve - baseline.reserve }; const color = getLoadColor(s.r.load); return <div key={s.id} className={`bg-slate-900/50 border rounded-2xl overflow-hidden ${s.isBaseline ? 'border-cyan-500/50' : 'border-slate-700'}`}><div className={`p-4 border-b border-slate-700 ${s.isBaseline ? 'bg-cyan-500/10' : ''}`}><h3 className="font-semibold text-white">{s.name}</h3>{s.adjustments.map((adj, i) => <p key={i} className="text-xs text-slate-400">• {adj.type === 'reduceCapacity' ? `${teams.find(tm => tm.id === adj.teamId)?.name}: -${adj.value}%` : `Add ${adj.name}`}</p>)}</div><div className="p-4 space-y-4"><div className={`p-3 rounded-xl ${color.bg} ${color.border} border`}><div className="flex justify-between"><span className="text-slate-300">Load</span><span className={`font-bold ${color.text}`}>{(s.r.load * 100).toFixed(0)}%</span></div>{!s.isBaseline && <p className={`text-xs ${parseFloat(delta.load) <= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{delta.load > 0 ? '+' : ''}{delta.load}%</p>}</div><div className="flex justify-between text-sm"><div><p className="text-slate-400">Reserve</p><p className={`font-bold ${s.r.reserve >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{s.r.reserve} SP</p></div><div className="text-right"><p className="text-slate-400">Overbooked</p><p className={`font-bold ${s.r.over === 0 ? 'text-emerald-400' : 'text-red-400'}`}>{s.r.over}</p></div></div></div></div>; })}</div></div>; };
-
-const RisksView = () => { const { t, teams, risks, addRisk, updateRisk, deleteRisk, updateTeam, userRole } = useApp(); const [votingActive, setVotingActive] = useState(false); const [newRisk, setNewRisk] = useState({ name: '', severity: 'medium', owner: '', status: 'owned' }); const canEdit = ROLES[userRole]?.canEdit; const avgConf = teams.reduce((s, tm) => s + (tm.confidence || 3), 0) / teams.length; return <div className="space-y-6"><div className="flex items-center justify-between"><h2 className="text-2xl font-bold text-white">{t.risks.title}</h2>{canEdit && <button onClick={() => setVotingActive(!votingActive)} className={`px-4 py-2 rounded-xl ${votingActive ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-800 text-slate-300'}`}>{votingActive ? t.risks.endVote : t.risks.startVote}</button>}</div><div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6"><div className="flex items-center justify-between mb-4"><h3 className="font-semibold text-white">{t.risks.confidence}</h3><div className={`px-4 py-2 rounded-xl ${avgConf >= 3.5 ? 'bg-emerald-500/20' : 'bg-amber-500/20'}`}><span className={`text-xl font-bold ${avgConf >= 3.5 ? 'text-emerald-400' : 'text-amber-400'}`}>{avgConf.toFixed(1)}/5</span></div></div><div className="grid grid-cols-3 gap-4">{teams.map(team => <div key={team.id} className="p-4 rounded-xl bg-slate-800/50"><div className="flex items-center gap-2 mb-3"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: team.color }} /><span className="text-white">{team.name}</span></div><div className="flex justify-center gap-2">{[1, 2, 3, 4, 5].map(v => <button key={v} onClick={() => votingActive && canEdit && updateTeam(team.id, { confidence: v })} disabled={!votingActive || !canEdit} className={`w-10 h-10 rounded-lg font-bold ${team.confidence === v ? (v <= 2 ? 'bg-red-500' : v === 3 ? 'bg-amber-500' : 'bg-emerald-500') + ' text-white' : 'bg-slate-700 text-slate-400'}`}>{v}</button>)}</div></div>)}</div></div><div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6"><h3 className="font-semibold text-white mb-4">{t.risks.topRisks}</h3><div className="space-y-3">{risks.map(risk => <div key={risk.id} className={`p-4 rounded-xl border ${risk.severity === 'high' ? 'bg-red-500/10 border-red-500/30' : risk.severity === 'medium' ? 'bg-amber-500/10 border-amber-500/30' : 'bg-slate-800/50 border-slate-700'}`}><div className="flex items-start justify-between"><div><div className="flex items-center gap-2 mb-1"><Badge variant={risk.severity === 'high' ? 'danger' : risk.severity === 'medium' ? 'warning' : 'default'}>{t.risks[risk.severity]}</Badge><Badge variant={risk.status === 'resolved' ? 'success' : 'default'}>{t.risks[risk.status]}</Badge></div><p className="text-white">{risk.name}</p><p className="text-sm text-slate-400 mt-1">{t.risks.owner}: {risk.owner}</p></div>{canEdit && <div className="flex gap-1"><select value={risk.status} onChange={e => updateRisk(risk.id, { status: e.target.value })} className="px-2 py-1 rounded bg-slate-700 text-white text-xs border-none">{['owned', 'accepted', 'mitigated', 'resolved'].map(s => <option key={s} value={s}>{t.risks[s]}</option>)}</select><button onClick={() => deleteRisk(risk.id)} className="p-1 hover:bg-red-500/20 rounded text-slate-400 hover:text-red-400"><Icon name="trash" className="w-4 h-4" /></button></div>}</div></div>)}</div>{canEdit && <div className="mt-4 p-4 rounded-xl bg-slate-800/50 space-y-2"><input type="text" value={newRisk.name} onChange={e => setNewRisk({ ...newRisk, name: e.target.value })} placeholder="Risk description" className="w-full px-3 py-2 rounded-lg bg-slate-700 text-white text-sm border border-slate-600" /><div className="flex gap-2"><select value={newRisk.severity} onChange={e => setNewRisk({ ...newRisk, severity: e.target.value })} className="px-3 py-2 rounded-lg bg-slate-700 text-white text-sm">{['high', 'medium', 'low'].map(s => <option key={s} value={s}>{t.risks[s]}</option>)}</select><input type="text" value={newRisk.owner} onChange={e => setNewRisk({ ...newRisk, owner: e.target.value })} placeholder="Owner" className="flex-1 px-3 py-2 rounded-lg bg-slate-700 text-white text-sm border border-slate-600" /><button onClick={() => { if (newRisk.name) { addRisk({ ...newRisk, id: uid() }); setNewRisk({ name: '', severity: 'medium', owner: '', status: 'owned' }); } }} className="px-4 py-2 rounded-lg bg-cyan-500/20 text-cyan-400">{t.c.add}</button></div></div>}</div></div>; };
-
-const ReportsView = () => { const { t, teams, items, pi } = useApp(); const [simulation, setSimulation] = useState(null); const [forecast, setForecast] = useState(null); const [running, setRunning] = useState(false); const runAll = async () => { setRunning(true); await new Promise(r => setTimeout(r, 100)); const sim = MonteCarloEngine.runSimulation(teams, items, 10000); const fc = AIForecastEngine.forecastART(teams); setSimulation(sim); setForecast(fc); setRunning(false); }; const exportCSV = () => { if (!simulation) return; const csv = MonteCarloEngine.generateCSV({ teams, items, simulation, pi, forecast }); const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `pi-report-${pi}.csv`; a.click(); }; return <div className="space-y-6"><div className="flex items-center justify-between"><div><h2 className="text-2xl font-bold text-white">{t.reports.title}</h2></div><div className="flex gap-2"><button onClick={exportCSV} disabled={!simulation} className="px-4 py-2 rounded-lg bg-slate-800 text-white text-sm disabled:opacity-50 flex items-center gap-2"><Icon name="download" className="w-4 h-4" />{t.reports.exportCSV}</button><button onClick={runAll} disabled={running} className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-emerald-500 text-white text-sm disabled:opacity-50 flex items-center gap-2"><Icon name="ai" className="w-4 h-4" />{running ? '...' : t.reports.runSimulation}</button></div></div><div className="bg-gradient-to-br from-purple-500/10 to-cyan-500/10 border border-purple-500/30 rounded-2xl p-6"><h3 className="font-semibold text-white mb-4 flex items-center gap-2"><Icon name="ai" className="w-5 h-5 text-purple-400" />{t.reports.aiTitle}</h3>{forecast ? <div className="space-y-4"><div className="grid grid-cols-4 gap-4"><Stat label={t.reports.nextPI} value={`${forecast.totalForecast} SP`} color="purple" /><Stat label="Range" value={`${forecast.totalLow}-${forecast.totalHigh}`} color="cyan" /><Stat label={t.reports.confidence} value={`${(forecast.avgConfidence * 100).toFixed(0)}%`} color={forecast.avgConfidence > 0.7 ? 'emerald' : 'amber'} /><Stat label="PI Capacity" value={`${forecast.piCapacity} SP`} color="cyan" /></div><div className="p-4 rounded-xl bg-slate-800/50"><p className="text-sm text-slate-400 mb-2">{t.reports.recommendation}</p><p className="text-white">{forecast.recommendation}</p></div><div className="grid grid-cols-3 gap-4">{forecast.teamForecasts?.map(tf => <div key={tf.id} className="p-4 rounded-xl bg-slate-800/50"><div className="flex items-center gap-2 mb-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: tf.color }} /><span className="text-white font-medium">{tf.name}</span></div><div className="flex items-center justify-between text-sm"><span className="text-slate-400">Current: {tf.velocity}</span><span className={`font-bold ${tf.forecast.trend > 0 ? 'text-emerald-400' : tf.forecast.trend < 0 ? 'text-red-400' : 'text-slate-300'}`}>→ {tf.forecast.forecast} SP<Icon name={tf.forecast.trend >= 0 ? 'trendUp' : 'trendDown'} className="w-3 h-3 inline ml-1" /></span></div>{tf.forecast.factors?.slice(0, 2).map((f, i) => <p key={i} className={`text-xs mt-1 ${f.type === 'positive' ? 'text-emerald-400' : f.type === 'negative' ? 'text-red-400' : 'text-slate-400'}`}>• {f.label}</p>)}</div>)}</div></div> : <div className="text-center py-8 text-slate-400"><Icon name="ai" className="w-12 h-12 mx-auto mb-4 opacity-50" /><p>Click "{t.reports.runSimulation}" to generate AI forecasts</p></div>}</div><div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6"><h3 className="font-semibold text-white mb-4">{t.reports.monteCarlo}</h3>{simulation ? <div className="space-y-6"><div className="grid grid-cols-4 gap-4"><div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30"><p className="text-xs text-emerald-400 uppercase">{t.reports.p50}</p><p className="text-2xl font-bold text-emerald-400">{simulation.p50} sprints</p></div><div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30"><p className="text-xs text-amber-400 uppercase">{t.reports.p75}</p><p className="text-2xl font-bold text-amber-400">{simulation.p75} sprints</p></div><div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30"><p className="text-xs text-red-400 uppercase">{t.reports.p90}</p><p className="text-2xl font-bold text-red-400">{simulation.p90} sprints</p></div><div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30"><p className="text-xs text-purple-400 uppercase">Total SP</p><p className="text-2xl font-bold text-purple-400">{simulation.totalSP}</p></div></div><div><p className="text-sm text-slate-400 mb-2">Completion Forecast</p><div className="flex items-end gap-1 h-32">{simulation.histogram.map((bucket, i) => <div key={i} className="flex-1 group relative"><div className="w-full bg-gradient-to-t from-cyan-500 to-emerald-500 rounded-t" style={{ height: `${bucket.pct * 3}%` }} /><div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block bg-slate-800 px-2 py-1 rounded text-xs whitespace-nowrap z-10">{bucket.sprints} sprints: {bucket.pct.toFixed(1)}%</div></div>)}</div><div className="flex justify-between mt-2 text-xs text-slate-500"><span>{simulation.min} sprints</span><span>{simulation.max} sprints</span></div></div></div> : <div className="text-center py-12 text-slate-400"><Icon name="reports" className="w-12 h-12 mx-auto mb-4 opacity-50" /><p>Click "{t.reports.runSimulation}" to generate Monte Carlo simulation</p></div>}</div></div>; };
-
-const PortfolioView = () => { const { t, arts, teams, items, sprints, dependencies } = useApp(); const portfolioData = useMemo(() => { return arts.map(art => { const artTeams = teams.filter(tm => art.teamIds?.includes(tm.id) || tm.artId === art.id); const artItems = items.filter(i => artTeams.some(tm => tm.id === i.teamId) || i.artId === art.id); let totalCap = 0, totalDemand = 0; artTeams.forEach(team => { sprints.forEach(sprint => { totalCap += sprint.isIP ? team.velocity * 0.2 : team.velocity; }); }); totalDemand = artItems.reduce((sum, i) => sum + (i.sp || 0), 0); const forecast = AIForecastEngine.forecastART(artTeams); return { ...art, teams: artTeams, items: artItems, totalCap, totalDemand, load: totalCap > 0 ? totalDemand / totalCap : 0, forecast }; }); }, [arts, teams, items, sprints]); const totalCap = portfolioData.reduce((sum, a) => sum + a.totalCap, 0); const totalDemand = portfolioData.reduce((sum, a) => sum + a.totalDemand, 0); const crossARTDeps = dependencies?.filter(d => d.crossART) || []; const suggestion = useMemo(() => { const overloaded = portfolioData.find(a => a.load > 0.9); const underloaded = portfolioData.find(a => a.load < 0.7); if (overloaded && underloaded) { const diff = Math.round((overloaded.load - underloaded.load) * overloaded.totalCap * 0.1); return { from: overloaded.name, to: underloaded.name, sp: diff }; } return null; }, [portfolioData]); return <div className="space-y-6"><div><h2 className="text-2xl font-bold text-white">{t.portfolio.title}</h2><p className="text-slate-400">{t.portfolio.subtitle}</p></div><div className="grid grid-cols-4 gap-4"><Stat label="ARTs" value={portfolioData.length} color="purple" /><Stat label={t.portfolio.totalCapacity} value={`${totalCap} SP`} color="cyan" /><Stat label={t.portfolio.totalDemand} value={`${totalDemand} SP`} color="purple" /><Stat label="Load" value={`${totalCap > 0 ? ((totalDemand / totalCap) * 100).toFixed(0) : 0}%`} color={totalDemand / totalCap > 0.9 ? 'red' : 'emerald'} /></div>{suggestion && <div className="bg-gradient-to-r from-purple-500/10 to-cyan-500/10 border border-purple-500/30 rounded-xl p-4 flex items-center justify-between"><div className="flex items-center gap-3"><Icon name="ai" className="w-8 h-8 text-purple-400" /><div><p className="text-white font-medium">{t.portfolio.suggestion}</p><p className="text-sm text-slate-400">Move capacity from <strong>{suggestion.from}</strong> to <strong>{suggestion.to}</strong> ({suggestion.sp} SP)</p></div></div><button className="px-4 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30">{t.portfolio.rebalance}</button></div>}<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">{portfolioData.map(art => { const color = getLoadColor(art.load); return <div key={art.id} className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden"><div className="p-4 border-b border-slate-700" style={{ borderLeftWidth: 4, borderLeftColor: art.color }}><div className="flex items-center justify-between"><h3 className="font-semibold text-white">{art.name}</h3><Badge variant={art.load > 0.9 ? 'danger' : art.load > 0.8 ? 'warning' : 'success'}>{(art.load * 100).toFixed(0)}%</Badge></div><p className="text-sm text-slate-400">{art.teams.length} teams • {art.items.length} items</p></div><div className="p-4 space-y-4"><div className="flex justify-between text-sm"><div><span className="text-slate-400">Capacity:</span> <span className="text-white font-medium">{art.totalCap} SP</span></div><div><span className="text-slate-400">Demand:</span> <span className="text-white font-medium">{art.totalDemand} SP</span></div><div><span className="text-slate-400">Reserve:</span> <span className={`font-medium ${art.totalCap - art.totalDemand >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{art.totalCap - art.totalDemand} SP</span></div></div><div className="h-2 bg-slate-800 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${Math.min(art.load * 100, 100)}%`, backgroundColor: color.fill }} /></div><div className="grid grid-cols-3 gap-2">{art.teams.slice(0, 3).map(team => <div key={team.id} className="p-2 rounded-lg bg-slate-800/50 text-center"><div className="w-2 h-2 rounded-full mx-auto mb-1" style={{ backgroundColor: team.color }} /><p className="text-xs text-white truncate">{team.name}</p><p className="text-xs text-slate-400">{team.velocity} SP</p></div>)}</div>{art.forecast && <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/30"><div className="flex items-center gap-2 text-sm"><Icon name="ai" className="w-4 h-4 text-purple-400" /><span className="text-slate-400">Next PI Forecast:</span><span className="text-purple-400 font-medium">{art.forecast.totalForecast} SP</span></div></div>}</div></div>; })}</div>{crossARTDeps.length > 0 && <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6"><h3 className="font-semibold text-white mb-4 flex items-center gap-2"><Icon name="link" className="w-5 h-5" />{t.portfolio.crossART}</h3><div className="space-y-2">{crossARTDeps.map(dep => <div key={dep.id} className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center gap-3"><Icon name="link" className="w-5 h-5 text-amber-400" /><span className="text-white">{dep.description || 'Cross-ART dependency'}</span><Badge variant="warning">Cross-ART</Badge></div>)}</div></div>}</div>; };
-
-const SettingsView = () => { const { t, auditLog, userRole } = useApp(); const [activeTab, setActiveTab] = useState('integrations'); const [jiraConfig, setJiraConfig] = useState({ url: '', token: '', project: '', connected: false }); const [alertConfig, setAlertConfig] = useState({ capacityOver: true, capacityWarn: true, lowConfidence: true, slack: false, teams: false, email: false, slackWebhook: '', teamsWebhook: '' }); const [autoSync, setAutoSync] = useState(false); const canImport = ROLES[userRole]?.canEdit; const testConnection = async () => { await new Promise(r => setTimeout(r, 1000)); setJiraConfig({ ...jiraConfig, connected: true }); }; const testAlert = (channel) => { alert(`Test notification sent to ${channel}`); }; return <div className="space-y-6"><h2 className="text-2xl font-bold text-white">{t.settings.title}</h2><div className="flex gap-2 border-b border-slate-800 pb-2">{['integrations', 'alerts', 'audit'].map(tab => <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 rounded-lg text-sm font-medium ${activeTab === tab ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:text-white'}`}>{tab === 'integrations' && '🔗 ' + t.settings.integrations}{tab === 'alerts' && '🔔 ' + t.settings.alerts}{tab === 'audit' && '📋 ' + t.settings.audit}</button>)}</div>{activeTab === 'integrations' && canImport && <div className="space-y-6"><div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6"><div className="flex items-center justify-between mb-4"><h3 className="font-semibold text-white flex items-center gap-2">🔷 Jira Cloud — Bidirectional Sync</h3>{jiraConfig.connected && <Badge variant="success">{t.settings.connected}</Badge>}</div><div className="grid grid-cols-3 gap-4 mb-4"><div><label className="block text-xs text-slate-400 mb-1">Jira URL</label><input type="text" value={jiraConfig.url} onChange={e => setJiraConfig({ ...jiraConfig, url: e.target.value })} placeholder="https://company.atlassian.net" className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm" /></div><div><label className="block text-xs text-slate-400 mb-1">API Token</label><input type="password" value={jiraConfig.token} onChange={e => setJiraConfig({ ...jiraConfig, token: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm" /></div><div><label className="block text-xs text-slate-400 mb-1">Project Key</label><input type="text" value={jiraConfig.project} onChange={e => setJiraConfig({ ...jiraConfig, project: e.target.value })} placeholder="PROJ" className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm" /></div></div><div className="flex flex-wrap gap-2"><button onClick={testConnection} className="px-3 py-1.5 rounded-lg bg-slate-700 text-white text-sm">{t.settings.testConnection}</button>{jiraConfig.connected && <><button className="px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 text-sm flex items-center gap-2"><Icon name="sync" className="w-4 h-4" />{t.settings.syncNow}</button><label className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-700 text-white text-sm cursor-pointer"><input type="checkbox" checked={autoSync} onChange={e => setAutoSync(e.target.checked)} />{t.settings.autoSync}</label></>}</div></div><div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6"><h3 className="font-semibold text-white mb-4 flex items-center gap-2">🔶 Azure DevOps</h3><div className="grid grid-cols-3 gap-4 mb-4"><div><label className="block text-xs text-slate-400 mb-1">Organization URL</label><input type="text" placeholder="https://dev.azure.com/org" className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm" /></div><div><label className="block text-xs text-slate-400 mb-1">PAT Token</label><input type="password" className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm" /></div><div><label className="block text-xs text-slate-400 mb-1">Project</label><input type="text" className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm" /></div></div><button className="px-3 py-1.5 rounded-lg bg-slate-700 text-white text-sm">{t.settings.testConnection}</button></div></div>}{activeTab === 'alerts' && <div className="space-y-6"><div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6"><h3 className="font-semibold text-white mb-4">Notification Channels</h3><div className="grid grid-cols-3 gap-4">{['slack', 'teams', 'email'].map(channel => <div key={channel} className="p-4 rounded-xl bg-slate-800/50"><div className="flex items-center gap-2 mb-3"><span className="text-xl">{channel === 'slack' ? '💬' : channel === 'teams' ? '👥' : '📧'}</span><span className="font-medium text-white capitalize">{channel}</span><input type="checkbox" checked={alertConfig[channel]} onChange={e => setAlertConfig({ ...alertConfig, [channel]: e.target.checked })} className="ml-auto" /></div><input type="text" value={alertConfig[`${channel}Webhook`] || ''} onChange={e => setAlertConfig({ ...alertConfig, [`${channel}Webhook`]: e.target.value })} placeholder={t.settings.webhook} className="w-full px-3 py-2 rounded-lg bg-slate-700 border border-slate-600 text-white text-sm mb-2" /><button onClick={() => testAlert(channel)} className="text-xs text-cyan-400 hover:underline">{t.settings.testAlert}</button></div>)}</div></div></div>}{activeTab === 'audit' && <div className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden"><table className="w-full"><thead><tr className="bg-slate-900 text-xs uppercase text-slate-400"><th className="px-4 py-3 text-left">Timestamp</th><th className="px-4 py-3 text-left">User</th><th className="px-4 py-3 text-left">Action</th><th className="px-4 py-3 text-left">Details</th></tr></thead><tbody className="divide-y divide-slate-800">{auditLog.map(log => <tr key={log.id} className="hover:bg-slate-800/30"><td className="px-4 py-3 text-sm text-slate-400">{new Date(log.timestamp).toLocaleString()}</td><td className="px-4 py-3 text-sm text-white">{log.user}</td><td className="px-4 py-3"><Badge variant={log.action === 'created' ? 'success' : log.action === 'updated' ? 'warning' : 'danger'}>{log.action}</Badge></td><td className="px-4 py-3 text-sm text-slate-300">{log.details}</td></tr>)}</tbody></table></div>}</div>; };
-
-export default function App() {
-  const [user, setUser] = useState(null);
-  const [userRole, setUserRole] = useState('rte');
-  const [isDemo, setIsDemo] = useState(false);
-  const [lang, setLang] = useState('pl');
-  const [view, setView] = useState('dashboard');
-  const [pi, setPi] = useState('PI44');
-  const [arts, setArts] = useState([]);
-  const [teams, setTeams] = useState([]);
-  const [items, setItems] = useState([]);
-  const [dependencies, setDependencies] = useState([]);
-  const [risks, setRisks] = useState([]);
-  const [absences, setAbsences] = useState({});
-  const [milestones, setMilestones] = useState([]);
-  const [auditLog, setAuditLog] = useState([]);
-  const [selectedItem, setSelectedItem] = useState(null);
-
-  const t = T[lang];
-  const sprints = useMemo(() => calculateSprints(PI_CONFIG[pi]), [pi]);
-
-  const handleDemo = (role, selectedLang) => {
-    const demo = createDemoData();
-    setArts(demo.arts);
-    setTeams(demo.teams);
-    setItems(demo.items);
-    setDependencies(demo.dependencies);
-    setRisks(demo.risks);
-    setAbsences(demo.absences);
-    setMilestones(demo.milestones);
-    setAuditLog(demo.auditLog);
-    setUserRole(role);
-    setLang(selectedLang);
-    setIsDemo(true);
-    setUser({ email: 'demo@pi-planner.app', role });
-  };
-
-  const addAuditEntry = (action, entity, entityId, details) => setAuditLog(prev => [{ id: uid(), user: user?.email || 'system', action, entity, entityId, timestamp: new Date().toISOString(), details }, ...prev]);
-  const updateTeam = (id, upd) => { setTeams(prev => prev.map(tm => tm.id === id ? { ...tm, ...upd } : tm)); addAuditEntry('updated', 'Team', id, Object.keys(upd).join(', ')); };
-  const addTeam = (team) => { setTeams(prev => [...prev, team]); addAuditEntry('created', 'Team', team.id, team.name); };
-  const deleteTeam = (id) => { setTeams(prev => prev.filter(tm => tm.id !== id)); addAuditEntry('deleted', 'Team', id, ''); };
-  const updateItem = (id, upd) => { setItems(prev => prev.map(i => i.id === id ? { ...i, ...upd } : i)); addAuditEntry('updated', 'Item', id, Object.keys(upd).join(', ')); };
-  const addItem = (item) => { setItems(prev => [...prev, item]); addAuditEntry('created', 'Item', item.id, item.name); };
-  const deleteItem = (id) => { setItems(prev => prev.filter(i => i.id !== id)); addAuditEntry('deleted', 'Item', id, ''); };
-  const addDependency = (dep) => { setDependencies(prev => [...prev, dep]); addAuditEntry('created', 'Dependency', dep.id, ''); };
-  const deleteDependency = (id) => { setDependencies(prev => prev.filter(d => d.id !== id)); addAuditEntry('deleted', 'Dependency', id, ''); };
-  const addRisk = (risk) => { setRisks(prev => [...prev, risk]); addAuditEntry('created', 'Risk', risk.id, risk.name); };
-  const updateRisk = (id, upd) => { setRisks(prev => prev.map(r => r.id === id ? { ...r, ...upd } : r)); };
-  const deleteRisk = (id) => { setRisks(prev => prev.filter(r => r.id !== id)); addAuditEntry('deleted', 'Risk', id, ''); };
-  const updateAbsence = (teamId, memberId, sprint, days) => setAbsences(prev => ({ ...prev, [`${teamId}-${memberId}-${sprint}`]: days }));
-
-  const ctx = { t, lang, setLang, arts, teams, setTeams, items, sprints, absences, milestones, dependencies, risks, auditLog, pi, setPi, userRole, user, isDemo, selectedItem, setSelectedItem, updateTeam, addTeam, deleteTeam, updateItem, addItem, deleteItem, addDependency, deleteDependency, addRisk, updateRisk, deleteRisk, updateAbsence, addAuditEntry };
-
-  if (!user && !isDemo) return <AuthScreen onDemo={handleDemo} />;
-
-  const navItems = [
-    { id: 'dashboard', icon: 'dashboard', label: t.nav.dashboard },
-    { id: 'capacity', icon: 'capacity', label: t.nav.capacity },
-    { id: 'backlog', icon: 'backlog', label: t.nav.backlog },
-    { id: 'teams', icon: 'teams', label: t.nav.teams },
-    { id: 'program', icon: 'program', label: t.nav.program },
-    { id: 'dependencies', icon: 'link', label: t.nav.dependencies },
-    { id: 'whatif', icon: 'whatif', label: t.nav.whatif },
-    { id: 'risks', icon: 'risks', label: t.nav.risks },
-    { id: 'reports', icon: 'reports', label: t.nav.reports },
-    { id: 'portfolio', icon: 'portfolio', label: t.nav.portfolio },
-    { id: 'settings', icon: 'settings', label: t.nav.settings }
-  ];
-
-  const views = { dashboard: RTEDashboard, capacity: CapacityBoard, backlog: BacklogView, teams: TeamsView, program: ProgramBoard, dependencies: DependenciesView, whatif: WhatIfView, risks: RisksView, reports: ReportsView, portfolio: PortfolioView, settings: SettingsView };
-  const ViewComponent = views[view] || RTEDashboard;
-
-  return (
-    <AppContext.Provider value={ctx}>
-      <div className="min-h-screen bg-slate-950 text-slate-100" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');`}</style>
-        <header className="bg-slate-900/80 backdrop-blur-lg border-b border-slate-800 sticky top-0 z-40">
-          <div className="max-w-[1800px] mx-auto px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-4"><div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-cyan-500/20"><span className="text-xl font-bold text-white">π</span></div><div><h1 className="text-lg font-semibold text-white">{t.app.title}</h1><p className="text-xs text-slate-400">{t.app.subtitle}</p></div></div>
-            <div className="flex items-center gap-4"><select value={pi} onChange={e => setPi(e.target.value)} className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm">{Object.entries(PI_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}</select><div className="flex gap-1 p-1 rounded-lg bg-slate-800"><button onClick={() => setLang('en')} className={`px-2 py-1 rounded text-xs ${lang === 'en' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400'}`}>EN</button><button onClick={() => setLang('pl')} className={`px-2 py-1 rounded text-xs ${lang === 'pl' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400'}`}>PL</button></div><Badge variant={userRole === 'admin' ? 'danger' : userRole === 'rte' ? 'purple' : 'default'}>{t.auth[userRole]}</Badge>{isDemo && <Badge variant="warning">DEMO</Badge>}<button onClick={() => { setUser(null); setIsDemo(false); }} className="text-sm text-slate-400 hover:text-red-400">{t.auth.signOut}</button></div>
-          </div>
-        </header>
-        <div className="max-w-[1800px] mx-auto flex">
-          <nav className="w-52 shrink-0 p-4 sticky top-20 h-[calc(100vh-80px)]"><div className="space-y-1">{navItems.map(item => <button key={item.id} onClick={() => setView(item.id)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${view === item.id ? 'bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 text-cyan-300' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}><Icon name={item.icon} className="w-5 h-5" /><span>{item.label}</span></button>)}</div></nav>
-          <main className="flex-1 p-6 min-h-[calc(100vh-80px)]"><ViewComponent /></main>
-        </div>
-        {selectedItem && <ItemDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />}
-      </div>
-    </AppContext.Provider>
+  if(allItems.length===0)return(
+    <Card style={{padding:32,textAlign:"center"}} hover={false}>
+      <div style={{fontSize:40,marginBottom:12}}>🗺️</div>
+      <div style={{fontFamily:Fn,fontWeight:700,marginBottom:4}}>{lang==="pl"?"Mapa podróży":"Trip Map"}</div>
+      <p style={{fontSize:12,color:C.textDim}}>{T.mapNoActivities[lang]}</p>
+    </Card>
   );
-}
+
+  return(
+    <div>
+      <div ref={mapRef} style={{width:"100%",height:350,borderRadius:16,overflow:"hidden",border:`1px solid ${C.borderLight}`,boxShadow:C.shadow}}/>
+      <div style={{marginTop:12,display:"flex",gap:6,flexWrap:"wrap"}}>
+        {[...new Set(allItems.map(it=>it.dayNum))].map(day=>{
+          const color=allItems.find(it=>it.dayNum===day)?.dayColor;
+          return<span key={day} style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:99,background:`${color}20`,color,border:`1px solid ${color}40`}}>{lang==="pl"?"Dzień":"Day"} {day}</span>
+        })}
+      </div>
+      <div style={{marginTop:10}}>
+        {allItems.map((it,i)=>(
+          <div key={it.id||i} style={{padding:"6px 0",display:"flex",alignItems:"center",gap:8,borderBottom:`1px solid ${C.borderLight}`}}>
+            <div style={{width:10,height:10,borderRadius:"50%",background:it.dayColor,flexShrink:0}}/>
+            <span style={{fontSize:12}}>{tE[it.type]}</span>
+            <span style={{fontSize:12,fontWeight:600,flex:1}}>{it.name}</span>
+            <span style={{fontSize:10,color:C.textDim}}>{lang==="pl"?"Dz":"D"}{it.dayNum} · {it.time}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════ EXPENSE SPLITTING ═══════════════
+const calcSettlements=(expenses,travelers,getU)=>{
+  if(!expenses?.length||!travelers?.length)return[];
+  const n=travelers.length;
+  const balance={};
+  travelers.forEach(uid=>{balance[uid]=0});
+  
+  expenses.forEach(e=>{
+    const splitN=e.splitAmong?.length>0?e.splitAmong.length:n;
+    const splitUsers=e.splitAmong?.length>0?e.splitAmong:travelers;
+    const share=e.amount/splitN;
+    if(balance[e.payer]!==undefined)balance[e.payer]+=e.amount;
+    splitUsers.forEach(uid=>{if(balance[uid]!==undefined)balance[uid]-=share});
+  });
+  
+  // Simplify debts
+  const debtors=[];const creditors=[];
+  travelers.forEach(uid=>{
+    if(balance[uid]<-0.01)debtors.push({uid,amount:-balance[uid]});
+    else if(balance[uid]>0.01)creditors.push({uid,amount:balance[uid]});
+  });
+  
+  debtors.sort((a,b)=>b.amount-a.amount);
+  creditors.sort((a,b)=>b.amount-a.amount);
+  
+  const settlements=[];
+  let di=0,ci=0;
+  while(di<debtors.length&&ci<creditors.length){
+    const amt=Math.min(debtors[di].amount,creditors[ci].amount);
+    if(amt>0.01){
+      settlements.push({from:debtors[di].uid,to:creditors[ci].uid,amount:Math.round(amt*100)/100});
+    }
+    debtors[di].amount-=amt;
+    creditors[ci].amount-=amt;
+    if(debtors[di].amount<0.01)di++;
+    if(creditors[ci].amount<0.01)ci++;
+  }
+  return settlements;
+};
+
+// ═══════════════ AI GROUP CONSENSUS ═══════════════
+const AIConsensus=({trip,lang,travelers,getU,onGenerate})=>{
+  const[prefs,setPrefs]=useState({});
+  const[generating,setGen]=useState(false);
+  const[result,setResult]=useState(null);
+  const paceOpts=[{id:"relaxed",e:"🐢",l:{pl:"Spokojne",en:"Relaxed"}},{id:"moderate",e:"⚖️",l:{pl:"Umiarkowane",en:"Moderate"}},{id:"intense",e:"🔥",l:{pl:"Intensywne",en:"Intense"}}];
+  const interestOpts=[{id:"culture",e:"🏛️",l:{pl:"Kultura",en:"Culture"}},{id:"food",e:"🍽️",l:{pl:"Jedzenie",en:"Food"}},{id:"nature",e:"🌿",l:{pl:"Natura",en:"Nature"}},{id:"shopping",e:"🛍️",l:{pl:"Zakupy",en:"Shopping"}},{id:"nightlife",e:"🌙",l:{pl:"Nocne życie",en:"Nightlife"}},{id:"adventure",e:"🏔️",l:{pl:"Przygoda",en:"Adventure"}}];
+  const budgetOpts=[{id:"budget",e:"💰",l:{pl:"Budżetowo",en:"Budget"}},{id:"mid",e:"💳",l:{pl:"Średnio",en:"Mid-range"}},{id:"luxury",e:"💎",l:{pl:"Luksus",en:"Luxury"}}];
+  const setPref=(uid,key,val)=>setPrefs(p=>({...p,[uid]:{...p[uid],[key]:val}}));
+  const toggleInterest=(uid,int)=>setPrefs(p=>{const cur=p[uid]?.interests||[];return{...p,[uid]:{...p[uid],interests:cur.includes(int)?cur.filter(x=>x!==int):[...cur,int]}}});
+  const generate=()=>{
+    setGen(true);
+    setTimeout(()=>{
+      const allInterests={};
+      Object.values(prefs).forEach(p=>(p.interests||[]).forEach(i=>{allInterests[i]=(allInterests[i]||0)+1}));
+      const topInterests=Object.entries(allInterests).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k])=>k);
+      const paces=Object.values(prefs).map(p=>p.pace).filter(Boolean);
+      const avgPace=paces.includes("relaxed")&&paces.includes("intense")?"moderate":paces[0]||"moderate";
+      const suggestions=[
+        {time:"09:00",name:topInterests.includes("culture")?`${trip.dest?.split(",")[0]} ${lang==="pl"?"główne muzeum":"main museum"}`:`${lang==="pl"?"Poranny spacer":"Morning walk"}`,type:topInterests.includes("culture")?"museum":"activity",duration:avgPace==="relaxed"?"2.5h":"1.5h",cost:topInterests.includes("culture")?30:0},
+        {time:"12:00",name:lang==="pl"?"Lunch w lokalnym stylu":"Local-style lunch",type:"food",duration:"1.5h",cost:topInterests.includes("food")?80:40},
+        {time:"14:00",name:topInterests.includes("nature")?`${lang==="pl"?"Park / ogrody":"Park / gardens"}`:`${lang==="pl"?"Zwiedzanie okolicy":"Explore the area"}`,type:topInterests.includes("nature")?"activity":"sight",duration:"2h",cost:0},
+        {time:"17:00",name:topInterests.includes("shopping")?`${lang==="pl"?"Lokalne sklepy i targi":"Local shops & markets"}`:`${lang==="pl"?"Kawa i odpoczynek":"Coffee break"}`,type:topInterests.includes("shopping")?"shopping":"food",duration:"1.5h",cost:topInterests.includes("shopping")?100:20},
+        {time:"19:30",name:lang==="pl"?"Kolacja — miejsce rekomendowane AI":"Dinner — AI recommended spot",type:"food",duration:"2h",cost:120}
+      ];
+      setResult({consensus:{pace:avgPace,topInterests,note:lang==="pl"?`Plan zoptymalizowany dla ${travelers.length} osób. Tempo: ${avgPace}. Główne zainteresowania: ${topInterests.join(", ")}.`:`Plan optimized for ${travelers.length} people. Pace: ${avgPace}. Top interests: ${topInterests.join(", ")}.`},suggestions});
+      setGen(false);
+    },2000);
+  };
+  return(
+    <div>
+      <Card style={{padding:20,marginBottom:14,background:`linear-gradient(135deg,${C.purpleLight},${C.white})`}} hover={false}>
+        <div style={{fontSize:18,fontWeight:800,fontFamily:Fn,marginBottom:4}}>{T.aiGroupTitle[lang]}</div>
+        <p style={{fontSize:12,color:C.textSec}}>{T.aiGroupDesc[lang]}</p>
+      </Card>
+      {travelers.map(uid=>{const u=getU(uid);const up=prefs[uid]||{};return(
+        <Card key={uid} style={{padding:16,marginBottom:10}} hover={false}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}><Av user={u} size={28}/><span style={{fontSize:13,fontWeight:700}}>{u.name}</span></div>
+          <div style={{fontSize:11,fontWeight:600,color:C.textDim,marginBottom:6}}>{T.pace[lang]}</div>
+          <div style={{display:"flex",gap:6,marginBottom:12}}>{paceOpts.map(o=><Pill key={o.id} small active={up.pace===o.id} onClick={()=>setPref(uid,"pace",o.id)}>{o.e} {o.l[lang]}</Pill>)}</div>
+          <div style={{fontSize:11,fontWeight:600,color:C.textDim,marginBottom:6}}>{T.interests[lang]}</div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>{interestOpts.map(o=><Pill key={o.id} small active={(up.interests||[]).includes(o.id)} onClick={()=>toggleInterest(uid,o.id)}>{o.e} {o.l[lang]}</Pill>)}</div>
+          <div style={{fontSize:11,fontWeight:600,color:C.textDim,marginBottom:6}}>{T.budgetRange[lang]}</div>
+          <div style={{display:"flex",gap:6}}>{budgetOpts.map(o=><Pill key={o.id} small active={up.budget===o.id} onClick={()=>setPref(uid,"budget",o.id)}>{o.e} {o.l[lang]}</Pill>)}</div>
+        </Card>
+      )})}
+      <button onClick={generate} disabled={generating} style={{width:"100%",padding:"14px",borderRadius:12,background:generating?C.textDim:`linear-gradient(135deg,${C.purple},${C.blue})`,border:"none",color:"#fff",fontSize:14,fontWeight:700,cursor:generating?"wait":"pointer",fontFamily:Fn,marginTop:8}}>
+        {generating?`${lang==="pl"?"Generuję...":"Generating..."}⏳`:(`✨ ${T.generatePlan[lang]}`)}
+      </button>
+      {result&&(
+        <div style={{marginTop:16}}>
+          <Card style={{padding:16,marginBottom:10,background:C.sageLight,border:`1px solid ${C.sage}33`}} hover={false}>
+            <div style={{fontSize:13,fontWeight:700,color:C.sage,marginBottom:4}}>🎯 {lang==="pl"?"Konsensus grupy":"Group Consensus"}</div>
+            <p style={{fontSize:12,color:C.textSec,lineHeight:1.5}}>{result.consensus.note}</p>
+          </Card>
+          <div style={{fontSize:13,fontWeight:700,fontFamily:Fn,marginBottom:8}}>{lang==="pl"?"Sugerowany plan dnia":"Suggested Day Plan"}</div>
+          {result.suggestions.map((s,i)=>(
+            <div key={i} style={{padding:"8px 0",display:"flex",gap:10,alignItems:"center",borderBottom:`1px solid ${C.borderLight}`}}>
+              <span style={{fontSize:11,fontWeight:600,color:C.textDim,width:40}}>{s.time}</span>
+              <span style={{fontSize:14}}>{tE[s.type]||"📍"}</span>
+              <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600}}>{s.name}</div><div style={{fontSize:10,color:C.textDim}}>{s.duration}{s.cost>0?` · ~${s.cost} ${trip.currency}`:""}</div></div>
+            </div>
+          ))}
+          <button onClick={()=>{if(onGenerate)onGenerate(result.suggestions)}} style={{width:"100%",marginTop:12,padding:"12px",borderRadius:12,background:C.sage,border:"none",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+            ✓ {lang==="pl"?"Dodaj do planu":"Add to itinerary"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ═══════════════ PWA INSTALL PROMPT ═══════════════
+const InstallBanner=({lang})=>{
+  const[deferredPrompt,setDP]=useState(null);
+  const[show,setShow]=useState(false);
+  useEffect(()=>{
+    const handler=e=>{e.preventDefault();setDP(e);setShow(true)};
+    window.addEventListener("beforeinstallprompt",handler);
+    return()=>window.removeEventListener("beforeinstallprompt",handler);
+  },[]);
+  if(!show)return null;
+  return(
+    <div style={{position:"fixed",bottom:70,left:16,right:16,maxWidth:448,margin:"0 auto",zIndex:150,background:C.white,borderRadius:16,boxShadow:C.shadowMd,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,border:`1px solid ${C.borderLight}`,animation:"fadeUp 0.3s"}}>
+      <span style={{fontSize:28}}>📱</span>
+      <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700}}>{T.installApp[lang]}</div><div style={{fontSize:11,color:C.textDim}}>{lang==="pl"?"Offline, szybsze ładowanie":"Offline, faster loading"}</div></div>
+      <button onClick={async()=>{if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;setShow(false);setDP(null)}}} style={{padding:"8px 16px",borderRadius:10,background:C.primary,border:"none",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{T.install[lang]}</button>
+      <button onClick={()=>setShow(false)} style={{background:"none",border:"none",color:C.textDim,fontSize:16,cursor:"pointer",padding:4}}>✕</button>
+    </div>
+  );
+};
+
+// ═══════════════ MAIN APP ═══════════════
+export default function Ventura(){
+const[lang,setLang]=useState("pl");
+const t=k=>T[k]?.[lang]||k;
+const tO=o=>(typeof o==="object"&&o!==null&&!Array.isArray(o)&&(o.pl||o.en))?o[lang]||o.en||"":o;
+const[loggedIn,setLoggedIn]=useState(false);
+const[isGuest,setIsGuest]=useState(false);
+const[currentUser,setCU]=useState(null);
+const[users,setUsers]=useState(USERS_INIT);
+const[scr,setScr]=useState("home");
+const[tab,setTab]=useState("trip");
+const[activeTrip,setAT]=useState(null);
+const[trips,setTrips]=useState(INIT_TRIPS);
+const[savedLists,setSL]=useState([]);
+const[showWiz,setSW]=useState(false);
+const[showInv,setSI]=useState(false);
+const[showProf,setSP]=useState(false);
+const[showTrav,setST]=useState(false);
+const[eDays,setED]=useState({});
+const[eItem,setEI]=useState(null);
+const[eBgt,setEB]=useState(false);
+const[bIn,setBI]=useState("");
+const[jIn,setJI]=useState("");
+const[wStep,setWS]=useState(0);
+const[wData,setWD]=useState({name:"",dest:"",startDate:"",endDate:"",travelers:2,style:"Cultural"});
+const[invEmail,setIE]=useState("");
+const[invRole,setIR]=useState("companion");
+const[packCat,setPC]=useState("");
+const[packItem,setPI]=useState("");
+const[showTpl,setSTpl]=useState(false);
+const[showSP2,setSP2]=useState(false);
+const[spName,setSPN]=useState("");
+const[showLP,setSLP]=useState(false);
+const[editExp,setEE]=useState(null);
+const[editExpD,setEED]=useState({});
+const[newExpO,setNEO]=useState(false);
+const[newExp,setNE]=useState({name:"",cat:"Food",amount:"",currency:"",payer:"",splitAmong:[]});
+const[editCur,setEC]=useState(false);
+const[compIn,setCI]=useState({name:"",url:"",price:"",notes:""});
+const[showAddDay,setSAD]=useState(false);
+const[newDay,setND]=useState({title:"",date:""});
+const[showAddAct,setSAA]=useState(null);
+const[newAct,setNA]=useState({name:"",time:"10:00",duration:"1h",type:"sight",cost:0,desc:"",lat:null,lng:null});
+const[dragItem,setDI]=useState(null);
+const[dragOverDay,setDOD]=useState(null);
+const[showAF,setSAF]=useState(false);
+const[fSearch,setFS]=useState("");
+const photoRef=useRef(null);
+const[showCelebration,setSC]=useState(false);
+const[showShare,setSSh]=useState(false);
+const[linkCopied,setLC]=useState(false);
+const[toast,setToast]=useState(null);
+
+const trip=activeTrip?trips.find(x=>x.id===activeTrip):null;
+const getU=id=>users.find(u=>u.id===id)||{name:"?",color:C.textDim};
+const uRole=trip?(trip.travelers.includes(currentUser?.id)?(currentUser?.role||"user"):trip.observers?.includes(currentUser?.id)?"observer":"guest"):(isGuest?"guest":"user");
+const canE=!isGuest&&["admin","user","companion"].includes(uRole);
+const upT=(id,fn)=>{if(isGuest)return;setTrips(p=>p.map(x=>x.id===id?fn(x):x))};
+const delT=id=>{setTrips(p=>p.filter(x=>x.id!==id));setAT(null);setScr("home")};
+const getK=(dest,obj)=>{if(!dest)return null;for(const k of Object.keys(obj)){if(dest.includes(k))return k}return null};
+const dayMins=items=>items.reduce((s,it)=>s+parseDur(it.duration),0);
+
+const showToast=(msg)=>{setToast(msg);setTimeout(()=>setToast(null),2500)};
+
+const handlePhotoUpload=e=>{const file=e.target.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{const url=ev.target.result;setCU(p=>({...p,photoUrl:url}));setUsers(us=>us.map(u=>u.id===currentUser.id?{...u,photoUrl:url}:u))};reader.readAsDataURL(file)};
+const allVacApproved=trip&&trip.vacStatus&&trip.travelers.length>0&&trip.travelers.every(uid=>trip.vacStatus[uid]==="approved");
+const syncSteps=(tripId,dayIdx)=>{const steps=Math.floor(Math.random()*8000)+12000;upT(tripId,tr=>({...tr,dayData:tr.dayData.map((d,i)=>i===dayIdx?{...d,steps:{...d.steps,[currentUser.id]:steps}}:d)}))};
+
+const onDS=(dI,iI)=>e=>{setDI({dI,iI});e.dataTransfer.effectAllowed="move"};
+const onDO=dI=>e=>{e.preventDefault();setDOD(dI)};
+const onDrop=tD=>e=>{e.preventDefault();setDOD(null);if(!dragItem||!trip||!canE)return;const{dI:sD,iI:sI}=dragItem;upT(trip.id,tr=>{const dd=[...tr.dayData.map(d=>({...d,items:[...d.items]}))];const[mv]=dd[sD].items.splice(sI,1);dd[tD].items.push(mv);return{...tr,dayData:dd}});setDI(null)};
+
+const handleShareCopy=()=>{
+  const url=copyShareLink(trip);
+  setLC(true);
+  showToast(t("linkCopied"));
+  setTimeout(()=>setLC(false),2000);
+};
+
+const handleICSExport=()=>{
+  if(!trip)return;
+  generateICS(trip,trip.dayData||[]);
+  showToast(lang==="pl"?"Eksportowano!":"Exported!");
+};
+
+const addAISuggestions=(suggestions)=>{
+  if(!trip||!suggestions?.length)return;
+  const dayNum=(trip.dayData?.length||0)+1;
+  upT(trip.id,tr=>({...tr,dayData:[...tr.dayData,{
+    day:dayNum,date:"",title:lang==="pl"?`AI Plan (Dzień ${dayNum})`:`AI Plan (Day ${dayNum})`,
+    items:suggestions.map((s,i)=>({id:"ai_"+Date.now()+"_"+i,time:s.time,name:s.name,desc:"",type:s.type,duration:s.duration,cost:s.cost,rating:0,votes:{[currentUser.id]:1},fav:{},status:trip.travelers.length<=1?"approved":"pending",lat:null,lng:null})),
+    weather:null,img:null,steps:{}
+  }]}));
+  showToast(lang==="pl"?"Plan AI dodany!":"AI plan added!");
+};
+
+const getTabs=()=>{
+  if(!trip)return[];
+  const base=[
+    {id:"map",l:t("tabMap"),i:"🗺️"},
+    ...(trip.status==="past"?[{id:"memories",l:t("tabMemories"),i:"✨"}]:[]),
+    ...(trip.status==="planning"?[{id:"plan",l:t("tabPlan"),i:"📋"}]:[]),
+    {id:"trip",l:t("tabTrip"),i:"📅"},
+    {id:"ai",l:t("tabAI"),i:"🤖"},
+    {id:"packing",l:t("tabPack"),i:"🎒"},
+    {id:"journal",l:t("tabJournal"),i:"📓"},
+    {id:"budget",l:t("tabBudget"),i:"💰"},
+    {id:"booking",l:t("tabBook"),i:"🔖"}
+  ];
+  return base;
+};
+
+const createTrip=()=>{if(isGuest){alert(t("loginToSave"));return}const id="trip_"+Date.now();setTrips(p=>[...p,{id,name:wData.name||`${wData.dest} Trip`,dest:wData.dest,dates:`${wData.startDate} – ${wData.endDate}`,travelers:[currentUser.id],observers:[],days:0,status:"planning",currency:"PLN",vacStatus:{[currentUser.id]:"not_applied"},heroImg:"",budget:{total:0},completeness:5,journal:[],memories:null,dayData:[],expenses:[],packing:{},deals:[],comparisons:[],shareToken:Math.random().toString(36).slice(2)+Date.now().toString(36),isPublic:false,planningTips:[{icon:"🏨",title:{pl:"Nocleg",en:"Accommodation"},desc:{pl:`Znajdź w ${wData.dest}.`,en:`Find in ${wData.dest}.`},done:false,priority:"high"},{icon:"✈️",title:{pl:"Loty",en:"Flights"},desc:{pl:"Szukaj ofert.",en:"Search deals."},done:false,priority:"high"},{icon:"🗺️",title:{pl:"Plan dnia",en:"Itinerary"},desc:{pl:`${wData.travelers} osób.`,en:`${wData.travelers} people.`},done:false,priority:"medium"},{icon:"🎒",title:{pl:"Lista pakowania",en:"Packing list"},desc:{pl:"Szablon lub od zera.",en:"Template or scratch."},done:false,priority:"low"}]}]);setAT(id);setScr("trip");setTab("plan");setSW(false);setWS(0);setWD({name:"",dest:"",startDate:"",endDate:"",travelers:2,style:"Cultural"})};
+
+const css=`@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,700;9..144,800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap');@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}input:focus,select:focus,textarea:focus{outline:none;border-color:${C.primary}!important}.maplibregl-popup-content{border-radius:12px!important;box-shadow:${C.shadowMd}!important;padding:8px 12px!important}.maplibregl-ctrl-attrib{font-size:9px!important}`;
+
+// ═══ LOGIN ═══
+if(!loggedIn&&!isGuest)return(
+<div style={{minHeight:"100vh",background:`linear-gradient(135deg,${C.primaryLight} 0%,${C.bg} 40%,${C.blueLight} 100%)`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Nunito Sans',sans-serif",padding:20}}>
+<style>{css}</style>
+<Card style={{width:"100%",maxWidth:400,padding:32,textAlign:"center",animation:"fadeUp 0.5s"}} hover={false}>
+<div style={{fontSize:40,fontWeight:800,fontFamily:Fn,color:C.primary,marginBottom:4}}>V</div>
+<div style={{fontSize:22,fontWeight:800,fontFamily:Fn,marginBottom:4}}>Ventura</div>
+<p style={{fontSize:13,color:C.textSec,marginBottom:4}}>{lang==="pl"?"Twój inteligentny towarzysz podróży grupowej":"Your intelligent group travel companion"}</p>
+<div style={{fontSize:10,fontWeight:600,color:C.primary,marginBottom:16,padding:"3px 12px",borderRadius:99,background:C.primaryLight,display:"inline-block"}}>v6.0 — Group Travel OS</div>
+<div style={{display:"flex",justifyContent:"center",gap:6,marginBottom:16}}><Pill small active={lang==="pl"} onClick={()=>setLang("pl")}>🇵🇱 PL</Pill><Pill small active={lang==="en"} onClick={()=>setLang("en")}>🇬🇧 EN</Pill></div>
+<div style={{fontSize:12,fontWeight:600,color:C.textDim,marginBottom:10,textTransform:"uppercase",letterSpacing:1}}>{t("selectProfile")}</div>
+{users.map(u=>(<div key={u.id} onClick={()=>{setCU(u);setLoggedIn(true)}} style={{padding:"12px 16px",display:"flex",alignItems:"center",gap:12,borderRadius:12,border:`1.5px solid ${C.border}`,marginBottom:8,cursor:"pointer",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=C.primary;e.currentTarget.style.background=C.primaryLight}} onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.background="transparent"}}><Av user={u} size={36}/><div style={{flex:1,textAlign:"left"}}><div style={{fontSize:14,fontWeight:600}}>{u.name}</div><div style={{fontSize:11,color:C.textDim}}>{u.email}</div></div><span style={{fontSize:10,fontWeight:700,color:ROLES[u.role].color,background:`${ROLES[u.role].color}15`,padding:"3px 10px",borderRadius:99,textTransform:"uppercase"}}>{tO(ROLES[u.role].l)}</span></div>))}
+<div style={{marginTop:12,borderTop:`1px solid ${C.border}`,paddingTop:12}}/>
+<button onClick={()=>setIsGuest(true)} style={{width:"100%",padding:"14px",borderRadius:12,background:C.bgAlt,border:`1.5px solid ${C.border}`,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",color:C.textSec}}>👁️ {t("continueAsGuest")}</button>
+<p style={{fontSize:11,color:C.textDim,marginTop:8}}>{t("guestNotice")}</p>
+{!isSupabaseConfigured&&<div style={{marginTop:12,padding:"8px 12px",borderRadius:8,background:C.goldLight,border:`1px solid ${C.gold}33`,fontSize:10,color:C.gold}}>⚡ Demo mode — {lang==="pl"?"Podłącz Supabase dla pełnych funkcji":"Connect Supabase for full features"}</div>}
+</Card></div>);
+
+
+// ═══ RENDER ═══
+return(<div style={{maxWidth:480,margin:"0 auto",minHeight:"100vh",background:C.bg,fontFamily:"'Nunito Sans',sans-serif",position:"relative"}}>
+<style>{css}</style>
+
+{/* Toast notification */}
+{toast&&<div style={{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",zIndex:999,background:C.text,color:"#fff",padding:"10px 20px",borderRadius:12,fontSize:13,fontWeight:600,boxShadow:C.shadowMd,animation:"fadeUp 0.2s"}}>{toast}</div>}
+
+{/* Header */}
+<div style={{padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:`1px solid ${C.borderLight}`,background:C.white,position:"sticky",top:0,zIndex:100}}>
+<div style={{display:"flex",alignItems:"center",gap:10}}>
+{scr==="trip"&&<button onClick={()=>{setScr("home");setAT(null)}} style={{padding:"6px 12px",borderRadius:8,background:C.bgAlt,border:"none",cursor:"pointer",fontSize:12,color:C.textSec,fontFamily:"inherit"}}>{t("back")}</button>}
+<span onClick={()=>{setScr("home");setAT(null)}} style={{fontSize:20,fontWeight:800,fontFamily:Fn,color:C.primary,cursor:"pointer"}}>V</span>
+{scr==="home"&&<span style={{fontSize:16,fontWeight:700,fontFamily:Fn}}>Ventura</span>}
+{scr==="trip"&&trip&&<span style={{fontSize:14,fontWeight:700,fontFamily:Fn,maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{trip.name}</span>}
+</div>
+<div style={{display:"flex",alignItems:"center",gap:6}}>
+<button onClick={()=>setLang(l=>l==="pl"?"en":"pl")} style={{padding:"4px 8px",borderRadius:6,background:C.bgAlt,border:`1px solid ${C.border}`,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",color:C.textSec}}>{lang==="pl"?"EN":"PL"}</button>
+{isGuest&&<span style={{fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:99,background:C.goldLight,color:C.gold}}>{t("guestMode")}</span>}
+{scr==="trip"&&trip&&<>
+<button onClick={()=>setSSh(true)} style={{padding:"6px 10px",borderRadius:99,background:C.blueLight,border:`1px solid ${C.blue}33`,fontSize:11,cursor:"pointer",fontFamily:"inherit",color:C.blue,fontWeight:600}}>🔗</button>
+<button onClick={()=>setST(true)} style={{padding:"6px 10px",borderRadius:99,background:C.bgAlt,border:`1px solid ${C.border}`,fontSize:11,cursor:"pointer",fontFamily:"inherit",color:C.textSec}}>👥 {trip.travelers.length+(trip.observers?.length||0)}</button>
+</>}
+{isGuest?<button onClick={()=>{setIsGuest(false);setScr("home")}} style={{padding:"6px 12px",borderRadius:8,background:C.primary,border:"none",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{lang==="pl"?"Zaloguj":"Login"}</button>
+:<div onClick={()=>setSP(true)} style={{cursor:"pointer"}}><Av user={currentUser} size={28}/></div>}
+</div></div>
+
+{/* ═══ HOME ═══ */}
+{scr==="home"&&(<div style={{padding:20,animation:"fadeUp 0.3s"}}>
+<div style={{fontSize:22,fontWeight:800,fontFamily:Fn,marginBottom:4}}>{t("welcome")}{currentUser?`, ${currentUser.name}`:""}</div>
+<p style={{fontSize:13,color:C.textSec,marginBottom:20}}>{t("planNext")}</p>
+{!isGuest&&<button onClick={()=>setSW(true)} style={{width:"100%",padding:"16px 20px",borderRadius:16,background:`linear-gradient(135deg,${C.primary},${C.coral})`,border:"none",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:Fn,boxShadow:C.shadowMd,display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:24}}><span style={{fontSize:18}}>+</span> {t("newTrip")}</button>}
+{isGuest&&<Card style={{padding:16,marginBottom:16,background:C.goldLight,border:`1px solid ${C.gold}33`}} hover={false}><div style={{fontSize:13,color:C.gold,fontWeight:600}}>👁️ {t("guestNotice")}</div></Card>}
+
+{trips.filter(tr=>isGuest||tr.travelers.includes(currentUser?.id)||tr.observers?.includes(currentUser?.id)).map(tr=>(<Card key={tr.id} onClick={()=>{setAT(tr.id);setScr("trip");setTab(tr.status==="past"?"memories":tr.status==="planning"?"plan":"map")}} style={{marginBottom:16,overflow:"hidden"}}>
+<PhotoSlider dest={tr.dest}/>
+<div style={{padding:16}}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div><div style={{fontSize:16,fontWeight:700,fontFamily:Fn}}>{tr.name}</div><div style={{fontSize:12,color:C.textSec}}>{tr.dest} · {tr.dates}</div></div>
+<span style={{fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:99,textTransform:"uppercase",background:tr.status==="upcoming"?C.sageLight:tr.status==="planning"?C.blueLight:C.bgAlt,color:tr.status==="upcoming"?C.sage:tr.status==="planning"?C.blue:C.textDim}}>{t(tr.status)}</span></div>
+{tr.status!=="past"&&<div style={{marginTop:10}}><div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.textDim,marginBottom:3}}><span>{t("tripReadiness")}</span><span>{tr.completeness}%</span></div><Bar v={tr.completeness} mx={100} color={tr.completeness>75?C.sage:tr.completeness>40?C.gold:C.coral} h={4}/></div>}
+<div style={{display:"flex",alignItems:"center",gap:8,marginTop:10}}><div style={{display:"flex"}}>{tr.travelers.map((uid,i)=>{const u=getU(uid);return<div key={uid} style={{width:24,height:24,borderRadius:"50%",background:u.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#fff",marginLeft:i>0?-6:0,border:"2px solid #fff",position:"relative",zIndex:tr.travelers.length-i}}>{u.name[0]}</div>})}</div><span style={{fontSize:11,color:C.textDim}}>{tr.travelers.length} {t("travelers")}</span></div></div></Card>))}
+
+<div style={{fontSize:14,fontWeight:700,fontFamily:Fn,marginTop:20,marginBottom:10}}>{t("getInspired")}</div>
+<div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:8}}>{INSP.map(d=>(<div key={d.name} onClick={isGuest?undefined:()=>{setWD(p=>({...p,dest:d.name}));setSW(true)}} style={{flex:"0 0 110px",borderRadius:14,overflow:"hidden",position:"relative",height:150,cursor:isGuest?"default":"pointer",boxShadow:C.shadow}}><Img src={d.img} alt={d.name} style={{width:"100%",height:"100%"}}/><div style={{position:"absolute",inset:0,background:"linear-gradient(0deg,rgba(0,0,0,0.6) 0%,transparent 50%)"}}/><span style={{position:"absolute",bottom:10,left:10,color:"#fff",fontSize:13,fontWeight:700}}>{d.name}</span></div>))}</div>
+</div>)}
+
+{/* ═══ TRIP VIEW ═══ */}
+{scr==="trip"&&trip&&(<div style={{animation:"fadeUp 0.3s"}}>
+{trip.heroImg&&<div style={{position:"relative",height:160}}><Img src={trip.heroImg} alt={trip.name} style={{width:"100%",height:"100%"}}/><div style={{position:"absolute",inset:0,background:"linear-gradient(0deg,rgba(44,24,16,0.7) 0%,transparent 60%)"}}/><div style={{position:"absolute",bottom:14,left:20,right:20}}><div style={{fontSize:22,fontWeight:800,fontFamily:Fn,color:"#fff"}}>{trip.name}</div><div style={{fontSize:12,color:"rgba(255,255,255,0.85)"}}>{trip.dest} · {trip.dates}</div></div></div>}
+
+{/* Currency bar */}
+<div style={{padding:"8px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",background:C.bgAlt,borderBottom:`1px solid ${C.borderLight}`}}>
+<div style={{display:"flex",alignItems:"center",gap:6,fontSize:12}}>
+<span style={{color:C.textDim}}>{t("currency")}:</span>
+{editCur?<select value={trip.currency||"EUR"} onChange={e=>{upT(trip.id,tr=>({...tr,currency:e.target.value}));setEC(false)}} autoFocus onBlur={()=>setEC(false)} style={{padding:"3px 6px",borderRadius:6,border:`1px solid ${C.primary}`,fontSize:12,fontWeight:600,background:C.white,fontFamily:"inherit"}}>{CURS.map(c=><option key={c}>{c}</option>)}</select>
+:<span onClick={canE?()=>setEC(true):undefined} style={{fontWeight:700,cursor:canE?"pointer":"default",color:C.primary}}>{trip.currency||"EUR"} {canE&&"✎"}</span>}
+</div>
+<div style={{display:"flex",gap:6}}>
+{canE&&trip.status!=="past"&&<button onClick={()=>{if(confirm(`${t("deleteTrip")} "${trip.name}"?`))delT(trip.id)}} style={{padding:"4px 12px",borderRadius:8,background:`${C.danger}10`,border:`1px solid ${C.danger}30`,color:C.danger,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>🗑</button>}
+</div></div>
+
+{/* Tabs */}
+<div style={{display:"flex",overflowX:"auto",gap:2,padding:"10px 16px 0",borderBottom:`1px solid ${C.borderLight}`,background:C.white}}>
+{getTabs().map(tb=>(<button key={tb.id} onClick={()=>setTab(tb.id)} style={{padding:"8px 12px",fontSize:11,fontWeight:tab===tb.id?700:500,color:tab===tb.id?C.primary:C.textDim,background:"transparent",border:"none",borderBottom:`2px solid ${tab===tb.id?C.primary:"transparent"}`,cursor:"pointer",whiteSpace:"nowrap",fontFamily:"inherit"}}>{tb.i} {tb.l}</button>))}</div>
+
+<div style={{padding:20}}>
+
+{/* ══ MAP TAB ══ */}
+{tab==="map"&&<TripMap trip={trip} lang={lang} getU={getU}/>}
+
+{/* ══ MEMORIES TAB ══ */}
+{tab==="memories"&&trip.memories&&(<div>
+<Card style={{padding:20,marginBottom:14,background:`linear-gradient(135deg,${C.goldLight},${C.white})`}} hover={false}>
+<div style={{fontSize:18,fontWeight:800,fontFamily:Fn,marginBottom:12}}>✨ {t("tabMemories")}</div>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>{Object.entries(trip.memories.stats).map(([k,v])=>(<div key={k} style={{padding:10,background:C.white,borderRadius:10,textAlign:"center"}}><div style={{fontSize:18,fontWeight:800,fontFamily:Fn,color:C.primary}}>{v}</div><div style={{fontSize:10,color:C.textDim,textTransform:"capitalize"}}>{k}</div></div>))}</div></Card>
+{trip.memories.highlights.map((h,i)=>(<Card key={i} style={{padding:14,marginBottom:8}} hover={false}><div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:20}}>{h.icon}</span><div><div style={{fontSize:11,color:C.textDim}}>{h.title}</div><div style={{fontSize:13,fontWeight:600}}>{h.value}</div></div></div></Card>))}
+</div>)}
+
+{/* ══ PLAN TAB ══ */}
+{tab==="plan"&&trip.planningTips&&(<div>
+<Card style={{padding:20,marginBottom:14,background:`linear-gradient(135deg,${C.blueLight},${C.white})`}} hover={false}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><div style={{fontSize:14,fontWeight:700,fontFamily:Fn}}>{t("tripReadiness")}</div><div style={{fontSize:11,color:C.textSec}}>{t("completeToPrep")}</div></div><div style={{fontSize:28,fontWeight:800,fontFamily:Fn,color:C.blue}}>{trip.completeness}%</div></div>
+<Bar v={trip.completeness} mx={100} color={C.blue} h={8}/></Card>
+{trip.planningTips.map((tip,i)=>(<Card key={i} style={{padding:14,marginBottom:8}} hover={false} onClick={canE?()=>{upT(trip.id,tr=>{const tips=tr.planningTips.map((tp,j)=>j===i?{...tp,done:!tp.done}:tp);return{...tr,planningTips:tips,completeness:Math.min(100,Math.round(tips.filter(x=>x.done).length/tips.length*100))}})}:undefined}>
+<div style={{display:"flex",alignItems:"center",gap:12}}>
+<div style={{width:22,height:22,borderRadius:6,border:tip.done?"none":`2px solid ${C.border}`,background:tip.done?C.sage:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{tip.done&&<span style={{color:"#fff",fontSize:12}}>✓</span>}</div>
+<span style={{fontSize:18}}>{tip.icon}</span>
+<div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,textDecoration:tip.done?"line-through":"none",color:tip.done?C.textDim:C.text}}>{tO(tip.title)}</div><div style={{fontSize:11,color:C.textDim}}>{tO(tip.desc)}</div></div>
+<span style={{fontSize:9,fontWeight:700,padding:"3px 8px",borderRadius:99,textTransform:"uppercase",background:tip.priority==="high"?C.coralLight:tip.priority==="medium"?C.goldLight:C.bgAlt,color:tip.priority==="high"?C.coral:tip.priority==="medium"?C.gold:C.textDim}}>{tip.priority}</span></div></Card>))}
+
+{/* Itinerary builder */}
+<div style={{marginTop:16,fontSize:14,fontWeight:700,fontFamily:Fn,marginBottom:10}}>🗺️ {lang==="pl"?"Buduj plan dnia":"Build daily plan"}</div>
+{(trip.dayData||[]).map((day,dI)=>{const tm=dayMins(day.items);const over=tm>720;return(
+<Card key={dI} style={{marginBottom:10,overflow:"hidden",border:dragOverDay===dI?`2px dashed ${C.primary}`:`1px solid ${C.borderLight}`}} hover={false} onDragOver={onDO(dI)} onDrop={onDrop(dI)}>
+<div style={{padding:"10px 16px",borderBottom:`1px solid ${C.borderLight}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+<div><div style={{fontSize:13,fontWeight:700}}>{lang==="pl"?"Dzień":"Day"} {day.day}: {day.title}</div><div style={{fontSize:11,color:C.textDim}}>{day.date} · {Math.round(tm/60*10)/10}h</div></div>
+{canE&&<button onClick={()=>upT(trip.id,tr=>({...tr,dayData:tr.dayData.filter((_,j)=>j!==dI)}))} style={{background:"none",border:"none",color:C.danger,fontSize:14,cursor:"pointer"}}>🗑</button>}</div>
+{over&&<div style={{padding:"8px 16px",background:C.coralLight,fontSize:12,fontWeight:600,color:C.coral}}>{t("dayOverloaded")}</div>}
+{day.items.map((it,iI)=>(<div key={it.id||iI} draggable={canE} onDragStart={canE?onDS(dI,iI):undefined} style={{padding:"8px 14px",display:"flex",gap:8,alignItems:"center",borderBottom:`1px solid ${C.borderLight}`,cursor:canE?"grab":"default",background:it.status==="pending"?C.goldLight:"transparent"}}>
+{canE&&<span style={{fontSize:10,color:C.textDim,cursor:"grab"}}>⠿</span>}
+<span style={{fontSize:13}}>{tE[it.type]||"📍"}</span>
+<div style={{flex:1}}><div style={{fontSize:12,fontWeight:600}}>{it.name}{it.status==="pending"&&<span style={{fontSize:10,color:C.gold,marginLeft:6}}>({t("pending")})</span>}</div>
+<div style={{fontSize:10,color:C.textDim}}>{it.time} · {it.duration}{it.cost>0?` · ${it.cost} ${trip.currency}`:""}</div></div>
+{it.status==="pending"&&canE&&<button onClick={e=>{e.stopPropagation();upT(trip.id,tr=>({...tr,dayData:tr.dayData.map((d,di)=>di===dI?{...d,items:d.items.map((x,xi)=>xi===iI?{...x,votes:{...x.votes,[currentUser.id]:1},status:Object.keys({...x.votes,[currentUser.id]:1}).length>=Math.ceil(trip.travelers.length/2)?"approved":"pending"}:x)}:d)}))}} style={{padding:"3px 8px",borderRadius:6,background:C.sageLight,border:"none",color:C.sage,fontSize:10,fontWeight:600,cursor:"pointer"}}>👍</button>}
+<button onClick={e=>{e.stopPropagation();if(!currentUser||isGuest)return;upT(trip.id,tr=>({...tr,dayData:tr.dayData.map((d,di)=>di===dI?{...d,items:d.items.map((x,xi)=>xi===iI?{...x,fav:{...x.fav,[currentUser.id]:!x.fav?.[currentUser.id]}}:x)}:d)}))}} style={{background:"none",border:"none",fontSize:16,cursor:"pointer",padding:2}}>{it.fav?.[currentUser?.id]?"❤️":"🤍"}</button>
+</div>))}
+{canE&&<div style={{padding:8,textAlign:"center"}}><button onClick={()=>{setSAA(dI);setNA({name:"",time:"10:00",duration:"1h",type:"sight",cost:0,desc:"",lat:null,lng:null})}} style={{padding:"6px 14px",borderRadius:8,background:C.bgAlt,border:`1px solid ${C.border}`,fontSize:11,cursor:"pointer",fontFamily:"inherit",color:C.textSec}}>{t("addActivity")}</button></div>}
+</Card>)})}
+{canE&&<button onClick={()=>setSAD(true)} style={{width:"100%",padding:"12px",borderRadius:12,background:C.blueLight,border:`1px solid ${C.blue}33`,color:C.blue,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",marginTop:8}}>{t("addDay")}</button>}
+{canE&&<p style={{fontSize:11,color:C.textDim,marginTop:8,textAlign:"center"}}>{t("dragHint")}</p>}
+</div>)}
+
+
+{/* ══ TRIP (itinerary view) ══ */}
+{tab==="trip"&&(trip.dayData?.length>0?<div>{trip.dayData.map((day,dI)=>{const open=eDays[day.day]!==false;const tm=dayMins(day.items);const over=tm>720;return(<Card key={day.day} style={{marginBottom:12,overflow:"hidden",border:dragOverDay===dI?`2px dashed ${C.primary}`:`1px solid ${C.borderLight}`}} hover={false} onDragOver={canE?onDO(dI):undefined} onDrop={canE?onDrop(dI):undefined}>
+<div onClick={()=>setED(p=>({...p,[day.day]:!open}))} style={{cursor:"pointer"}}>
+{day.img&&<Img src={day.img} alt={day.title} style={{width:"100%",height:100}}/>}
+<div style={{padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:open?`1px solid ${C.borderLight}`:"none"}}>
+<div><div style={{fontSize:14,fontWeight:700,fontFamily:Fn}}>{lang==="pl"?"Dzień":"Day"} {day.day}: {day.title}</div><div style={{fontSize:12,color:C.textSec,display:"flex",alignItems:"center",gap:6}}>{day.date}{day.weather&&<> · <WI t={day.weather.icon}/> {day.weather.hi}°/{day.weather.lo}°</>} · {Math.round(tm/60*10)/10}h</div>
+{day.steps&&<div style={{fontSize:11,color:C.sage,display:"flex",alignItems:"center",gap:4,marginTop:2}}>{Object.entries(day.steps).map(([uid,s])=><span key={uid} style={{padding:"2px 6px",borderRadius:4,background:C.sageLight}}>🚶 {getU(uid).name}: {s.toLocaleString()}</span>)}
+{canE&&trip.status==="upcoming"&&<button onClick={e=>{e.stopPropagation();syncSteps(trip.id,dI)}} style={{padding:"2px 8px",borderRadius:4,background:C.blueLight,border:`1px solid ${C.blue}33`,color:C.blue,fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>📱 {t("syncHealth")}</button>}</div>}</div>
+<span style={{fontSize:14,color:C.textDim,transform:open?"rotate(180deg)":"none",transition:"transform 0.2s"}}>▼</span></div></div>
+{over&&open&&<div style={{padding:"8px 16px",background:C.coralLight,fontSize:12,fontWeight:600,color:C.coral}}>{t("dayOverloaded")}</div>}
+{open&&<div>{day.items.map((it,iI)=>(<div key={it.id||iI} draggable={canE} onDragStart={canE?onDS(dI,iI):undefined} onClick={()=>setEI(eItem===`${day.day}-${iI}`?null:`${day.day}-${iI}`)} style={{padding:"10px 14px",display:"flex",gap:8,borderBottom:`1px solid ${C.borderLight}`,cursor:canE?"grab":"pointer",background:eItem===`${day.day}-${iI}`?C.bgAlt:it.status==="pending"?C.goldLight:"transparent",alignItems:"center"}}>
+{canE&&<span style={{fontSize:10,color:C.textDim}}>⠿</span>}
+<div style={{minWidth:36,fontSize:11,fontWeight:600,color:C.textDim}}>{it.time}</div>
+<div style={{flex:1}}><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:13}}>{tE[it.type]}</span><span style={{fontSize:13,fontWeight:600}}>{it.name}</span>{it.rating>0&&<span style={{fontSize:11,color:C.gold}}>★ {it.rating}</span>}{it.status==="pending"&&<span style={{fontSize:10,color:C.gold}}>({t("pending")})</span>}</div>
+{eItem===`${day.day}-${iI}`&&<div style={{marginTop:4}}>{it.desc&&<p style={{fontSize:12,color:C.textSec}}>{it.desc}</p>}<div style={{fontSize:11,color:C.textDim}}>{it.duration}{it.cost>0?` · ${it.cost} ${trip.currency}`:""}{it.lat?` · 📍 ${it.lat.toFixed(3)}, ${it.lng.toFixed(3)}`:""}</div></div>}</div>
+{it.status==="pending"&&canE&&<button onClick={e=>{e.stopPropagation();upT(trip.id,tr=>({...tr,dayData:tr.dayData.map((d,di)=>di===dI?{...d,items:d.items.map((x,xi)=>xi===iI?{...x,votes:{...x.votes,[currentUser.id]:1},status:Object.keys({...x.votes,[currentUser.id]:1}).length>=Math.ceil(trip.travelers.length/2)?"approved":"pending"}:x)}:d)}))}} style={{padding:"3px 8px",borderRadius:6,background:C.sageLight,border:"none",color:C.sage,fontSize:10,fontWeight:600,cursor:"pointer",flexShrink:0}}>👍</button>}
+<button onClick={e=>{e.stopPropagation();if(!currentUser||isGuest)return;upT(trip.id,tr=>({...tr,dayData:tr.dayData.map((d,di)=>di===dI?{...d,items:d.items.map((x,xi)=>xi===iI?{...x,fav:{...x.fav,[currentUser.id]:!x.fav?.[currentUser.id]}}:x)}:d)}))}} style={{background:"none",border:"none",fontSize:16,cursor:"pointer",padding:2,flexShrink:0}}>{it.fav?.[currentUser?.id]?"❤️":"🤍"}</button>
+</div>))}
+{canE&&<div style={{padding:8,textAlign:"center"}}><button onClick={()=>{setSAA(dI);setNA({name:"",time:"10:00",duration:"1h",type:"sight",cost:0,desc:"",lat:null,lng:null})}} style={{padding:"6px 14px",borderRadius:8,background:C.primaryLight,border:`1px solid ${C.primary}33`,fontSize:11,cursor:"pointer",fontFamily:"inherit",color:C.primary}}>+ {t("proposeActivity")}</button></div>}
+</div>}</Card>)})}</div>
+:<Card style={{padding:32,textAlign:"center"}} hover={false}><div style={{fontSize:40,marginBottom:12}}>🗺️</div><div style={{fontFamily:Fn,fontWeight:700}}>{lang==="pl"?"Brak planu":"No itinerary"}</div><p style={{fontSize:12,color:C.textDim,marginTop:4}}>{lang==="pl"?"Przejdź do zakładki Plan aby zbudować trasę":"Go to Plan tab to build your itinerary"}</p></Card>)}
+
+{/* ══ AI TAB ══ */}
+{tab==="ai"&&(()=>{const dk=getK(trip.dest,TRANSPORT);const ck=getK(trip.dest,CUSTOMS);const ak=getK(trip.dest,ADVISORY);const trn=dk?TRANSPORT[dk]:null;const cust=ck?CUSTOMS[ck]:null;const adv=ak?ADVISORY[ak]:null;
+return(<div>
+{/* AI Group Consensus */}
+<AIConsensus trip={trip} lang={lang} travelers={trip.travelers} getU={getU} onGenerate={addAISuggestions}/>
+
+<div style={{marginTop:20}}/>
+
+{trn&&<Card style={{padding:16,marginBottom:14}} hover={false}>
+<div style={{fontSize:14,fontWeight:700,fontFamily:Fn,marginBottom:4}}>🚌 {t("gettingAround")}</div>
+<p style={{fontSize:12,color:C.textSec,lineHeight:1.5,marginBottom:10}}>{trn.info[lang]}</p>
+<div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>{trn.rec.map(m=><span key={m} style={{padding:"4px 10px",borderRadius:99,background:C.sageLight,color:C.sage,fontSize:11,fontWeight:600}}>✓ {m}</span>)}</div>
+{Object.entries(trn.modes).map(([mode,d])=>(<div key={mode} style={{padding:"8px 0",borderBottom:`1px solid ${C.borderLight}`,display:"flex",alignItems:"center",gap:10}}>
+<div style={{flex:1}}><div style={{fontSize:12,fontWeight:600}}>{mode} <span style={{color:C.gold}}>{"★".repeat(d.r)}{"☆".repeat(5-d.r)}</span></div>
+<div style={{fontSize:11,color:C.textSec}}>{d.n[lang]}</div></div></div>))}</Card>}
+
+{trn?.airport&&<Card style={{padding:16,marginBottom:14,background:C.blueLight,border:`1px solid ${C.blue}22`}} hover={false}>
+<div style={{fontSize:14,fontWeight:700,fontFamily:Fn,color:C.blue,marginBottom:6}}>✈️ {t("airportTransfer")}</div>
+<p style={{fontSize:12,lineHeight:1.6}}>{trn.airport[lang]}</p></Card>}
+
+{cust&&<Card style={{padding:16,marginBottom:14}} hover={false}>
+<div style={{fontSize:14,fontWeight:700,fontFamily:Fn,marginBottom:10}}>🎎 {t("localCustoms")}</div>
+{cust.map((c,i)=>(<div key={i} style={{padding:"8px 0",borderBottom:i<cust.length-1?`1px solid ${C.borderLight}`:"none",display:"flex",gap:10}}>
+<span style={{fontSize:18}}>{c.icon}</span><p style={{fontSize:12,color:C.textSec,lineHeight:1.5,flex:1}}>{c.t[lang]}</p></div>))}</Card>}
+
+{adv&&<Card style={{padding:16,marginBottom:14}} hover={false}>
+<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{fontSize:14,fontWeight:700,fontFamily:Fn}}>🛡️ {t("travelAdvisory")}</div><span style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:99,background:`${adv.color}20`,color:adv.color}}>{adv.level[lang]}</span></div>
+<p style={{fontSize:12,color:C.textSec,lineHeight:1.5,marginBottom:12}}>{adv.info[lang]}</p>
+<div style={{fontSize:12,fontWeight:700,color:C.textDim,marginBottom:6}}>{t("requiredDocs")}</div>
+{adv.docs.map((d,i)=>(<div key={i} style={{padding:"6px 0",display:"flex",alignItems:"center",gap:8,borderBottom:i<adv.docs.length-1?`1px solid ${C.borderLight}`:"none"}}>
+<span style={{fontSize:12}}>{d.req?"🔴":"🟡"}</span><span style={{fontSize:12,flex:1}}>{d.t[lang]}</span></div>))}</Card>}
+</div>)})()}
+
+
+{/* ══ PACKING TAB ══ */}
+{tab==="packing"&&(()=>{const pk=trip.packing||{};const tot=Object.values(pk).flat().length;const done=Object.values(pk).flat().filter(x=>x.packed).length;return(<div>
+{canE&&trip.status!=="past"&&<Card style={{padding:14,marginBottom:14,background:C.purpleLight,border:`1px solid ${C.purple}33`}} hover={false}>
+<div style={{fontSize:12,fontWeight:700,color:C.purple,marginBottom:8}}>🏖️ {t("vacationRequest")}</div>
+{trip.travelers.map(uid=>{const u=getU(uid);const vs=trip.vacStatus?.[uid]||"not_applied";const sts=["not_applied","applied","approved","denied"];const sL={not_applied:t("vacNotApplied"),applied:t("vacApplied"),approved:t("vacApproved"),denied:t("vacDenied")};const sC={not_applied:C.textDim,applied:C.gold,approved:C.sage,denied:C.danger};
+return(<div key={uid} style={{padding:"6px 0",display:"flex",alignItems:"center",gap:10}}><Av user={u} size={24}/><span style={{fontSize:12,fontWeight:600,flex:1}}>{u.name}</span>
+{uid===currentUser?.id?<select value={vs} onChange={e=>upT(trip.id,tr=>({...tr,vacStatus:{...tr.vacStatus,[uid]:e.target.value}}))} style={{padding:"4px 8px",borderRadius:6,border:`1px solid ${C.border}`,fontSize:11,fontWeight:600,color:sC[vs],background:C.white,fontFamily:"inherit"}}>{sts.map(s=><option key={s} value={s}>{sL[s]}</option>)}</select>
+:<span style={{fontSize:11,fontWeight:600,color:sC[vs]}}>{sL[vs]}</span>}</div>)})}
+{allVacApproved&&!showCelebration&&<button onClick={()=>setSC(true)} style={{width:"100%",marginTop:8,padding:"10px",borderRadius:10,background:`linear-gradient(135deg,${C.sage},${C.blue})`,border:"none",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{t("allApprovedTitle")}</button>}
+</Card>}
+
+{tot>0&&<Card style={{padding:16,marginBottom:14,background:`linear-gradient(135deg,${C.sageLight},${C.white})`}} hover={false}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><div style={{fontSize:14,fontWeight:700,fontFamily:Fn}}>🎒 {t("packingProgress")}</div><span style={{fontSize:13,fontWeight:700,color:C.sage}}>{done}/{tot}</span></div><Bar v={done} mx={tot||1} color={C.sage} h={6}/></Card>}
+
+{canE&&<div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
+<button onClick={()=>setSTpl(!showTpl)} style={{flex:1,padding:"10px",borderRadius:12,background:C.blueLight,border:`1px solid ${C.blue}33`,color:C.blue,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>📦 {t("templates")}</button>
+<button onClick={()=>{if(tot===0)return;setSP2(true)}} style={{flex:1,padding:"10px",borderRadius:12,background:C.primaryLight,border:`1px solid ${C.primary}33`,color:C.primary,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>💾 {t("saveList")}</button>
+{savedLists.length>0&&<button onClick={()=>setSLP(true)} style={{flex:1,padding:"10px",borderRadius:12,background:C.goldLight,border:`1px solid ${C.gold}33`,color:C.gold,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>📂 {t("loadList")} ({savedLists.length})</button>}</div>}
+
+{showTpl&&<div style={{marginBottom:14,display:"flex",gap:8,overflowX:"auto"}}>{PACK_TPL.map(tpl=>(<Card key={tpl.id} style={{flex:"0 0 120px",padding:14,textAlign:"center",cursor:"pointer"}} onClick={()=>{const np={};Object.entries(tpl.items).forEach(([c,items])=>{np[c]=items.map(it=>({...it,packed:false}))});upT(trip.id,tr=>({...tr,packing:{...tr.packing,...np}}));setSTpl(false)}}><div style={{fontSize:24,marginBottom:6}}>{tpl.icon}</div><div style={{fontSize:12,fontWeight:600}}>{tO(tpl.name)}</div></Card>))}</div>}
+
+{canE&&<Card style={{padding:14,marginBottom:14,background:C.primaryLight,border:`1px solid ${C.primary}33`}} hover={false}>
+<div style={{fontSize:12,fontWeight:700,color:C.primary,marginBottom:6}}>✨ {t("aiSuggestions")}</div>
+<div style={{display:"flex",flexWrap:"wrap",gap:6}}>{AI_SUGG.slice(0,6).map(sug=>{const has=Object.values(pk).flat().some(x=>x.item===sug);return(<button key={sug} disabled={has} onClick={()=>{upT(trip.id,tr=>{const p={...tr.packing};p["AI"]=[...(p["AI"]||[]),{item:sug,qty:1,packed:false}];return{...tr,packing:p}})}} style={{padding:"5px 10px",borderRadius:99,fontSize:11,background:has?C.bgAlt:C.white,border:`1px solid ${C.border}`,color:has?C.textDim:C.text,cursor:has?"default":"pointer",fontFamily:"inherit",textDecoration:has?"line-through":"none"}}>+ {sug}</button>)})}</div></Card>}
+
+<Card style={{padding:14,marginBottom:14,background:C.goldLight,border:`1px solid ${C.gold}33`}} hover={false}>
+<div style={{fontSize:12,fontWeight:700,color:C.gold,marginBottom:8}}>⚠️ {t("dontForget")}</div>
+{DONT_FORGET[lang].map((tip,i)=><div key={i} style={{fontSize:12,padding:"4px 0",lineHeight:1.5}}>{tip}</div>)}</Card>
+
+{Object.keys(pk).length===0?<Card style={{padding:32,textAlign:"center"}} hover={false}><div style={{fontSize:40,marginBottom:12}}>🎒</div><div style={{fontFamily:Fn,fontWeight:700}}>{lang==="pl"?"Brak listy":"No list yet"}</div></Card>
+:Object.entries(pk).map(([cat,items])=>(<Card key={cat} style={{marginBottom:10,overflow:"hidden"}} hover={false}>
+<div style={{padding:"10px 16px",borderBottom:`1px solid ${C.borderLight}`,fontSize:13,fontWeight:700,display:"flex",justifyContent:"space-between"}}><span>{cat}</span><span style={{fontSize:11,color:C.textDim}}>{items.filter(x=>x.packed).length}/{items.length}</span></div>
+{items.map((it,i)=>(<div key={i} style={{padding:"9px 16px",display:"flex",alignItems:"center",gap:10,borderBottom:i<items.length-1?`1px solid ${C.borderLight}`:"none"}}>
+<div onClick={canE?()=>upT(trip.id,tr=>({...tr,packing:{...tr.packing,[cat]:tr.packing[cat].map((x,j)=>j===i?{...x,packed:!x.packed}:x)}})):undefined} style={{width:18,height:18,borderRadius:5,border:it.packed?"none":`2px solid ${C.border}`,background:it.packed?C.sage:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:canE?"pointer":"default"}}>{it.packed&&<span style={{color:"#fff",fontSize:11}}>✓</span>}</div>
+<span style={{flex:1,fontSize:13,textDecoration:it.packed?"line-through":"none",color:it.packed?C.textDim:C.text}}>{it.item}</span>
+{canE&&trip&&<select value={it.assignedTo||""} onChange={ev=>{const v=ev.target.value||null;upT(trip.id,tr=>({...tr,packing:{...tr.packing,[cat]:tr.packing[cat].map((x,j)=>j===i?{...x,assignedTo:v}:x)}}))}} style={{padding:"2px 4px",borderRadius:6,border:`1px solid ${C.border}`,fontSize:10,fontFamily:"inherit",background:C.bg,color:C.textSec,maxWidth:70}}><option value="">{t("unassigned")}</option>{trip.travelers.map(uid=>{const u=getU(uid);return<option key={uid} value={uid}>{u.name}</option>})}</select>}
+<span style={{fontSize:11,color:C.textDim}}>×{it.qty}</span>
+{canE&&<button onClick={()=>upT(trip.id,tr=>({...tr,packing:{...tr.packing,[cat]:tr.packing[cat].filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",color:C.danger,fontSize:13,cursor:"pointer"}}>×</button>}</div>))}</Card>))}
+
+{canE&&<Card style={{padding:14,marginTop:12}} hover={false}>
+<div style={{display:"flex",gap:6,marginBottom:8}}>
+<input value={packCat} onChange={e=>setPC(e.target.value)} placeholder={t("category")} list="pcat" style={{flex:1,padding:"8px 12px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:12,fontFamily:"inherit",background:C.bg}}/><datalist id="pcat">{Object.keys(pk).map(c=><option key={c} value={c}/>)}</datalist>
+<input value={packItem} onChange={e=>setPI(e.target.value)} placeholder={t("itemName")} style={{flex:1,padding:"8px 12px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:12,fontFamily:"inherit",background:C.bg}}/></div>
+<button onClick={()=>{if(!packItem.trim())return;const cat=packCat.trim()||"Other";upT(trip.id,tr=>{const p={...tr.packing};p[cat]=[...(p[cat]||[]),{item:packItem.trim(),qty:1,packed:false,assignedTo:null}];return{...tr,packing:p}});setPI("");setPC("")}} style={{width:"100%",padding:"10px",borderRadius:10,background:C.sage,border:"none",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>+ {t("add")}</button></Card>}
+</div>)})()}
+
+{/* ══ BUDGET TAB with Expense Splitting ══ */}
+{tab==="budget"&&(()=>{const cur=trip.currency||"PLN";const exps=trip.expenses||[];const tS=exps.reduce((s,e)=>s+e.amount,0);const bT=trip.budget?.total||1;const grp={};exps.forEach(e=>{grp[e.cat]=(grp[e.cat]||0)+e.amount});const pie=Object.entries(grp).map(([c,v])=>({label:c,value:v,color:CAT_C[c]||C.textDim}));const hCur=currentUser?.prefs?.currency||"PLN";
+const stlmts=calcSettlements(exps,trip.travelers,getU);
+return(<div>
+<Card style={{padding:20,marginBottom:14,background:`linear-gradient(135deg,${C.primaryLight},${C.white})`}} hover={false}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+<div><div style={{fontSize:11,color:C.textDim,textTransform:"uppercase",fontWeight:600}}>{t("spent")}</div><div style={{fontSize:28,fontWeight:800,fontFamily:Fn}}>{fmt(tS)} <span style={{fontSize:14,color:C.textSec}}>{cur}</span></div></div>
+<div style={{textAlign:"right"}}><div style={{fontSize:11,color:C.textDim,fontWeight:600}}>{t("budget").toUpperCase()}</div>
+{eBgt&&canE?<div style={{display:"flex",gap:4}}><input value={bIn} onChange={e=>setBI(e.target.value)} autoFocus type="number" onKeyDown={e=>{if(e.key==="Enter"){const v=parseInt(bIn);if(v>0)upT(trip.id,tr=>({...tr,budget:{...tr.budget,total:v}}));setEB(false)}}} style={{width:80,padding:"5px 8px",borderRadius:8,border:`1.5px solid ${C.primary}`,fontSize:14,fontWeight:700,fontFamily:Fn,textAlign:"right"}}/>
+<button onClick={()=>{const v=parseInt(bIn);if(v>0)upT(trip.id,tr=>({...tr,budget:{...tr.budget,total:v}}));setEB(false)}} style={{padding:"5px 10px",borderRadius:8,background:C.sage,border:"none",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer"}}>✓</button></div>
+:<div onClick={canE?()=>{setEB(true);setBI(String(bT))}:undefined} style={{cursor:canE?"pointer":"default"}}><span style={{fontSize:16,fontWeight:700}}>{fmt(bT)} {cur}</span>{canE&&<span style={{fontSize:11,color:C.primary}}> ✎</span>}</div>}
+<div style={{fontSize:12,color:tS<=bT?C.sage:C.danger,fontWeight:600,marginTop:2}}>{tS<=bT?`${fmt(bT-tS)} ${t("remaining")}`:`${fmt(tS-bT)} ${t("overBudget")}`}</div></div></div>
+<Bar v={tS} mx={bT} color={tS<=bT?C.primary:C.danger} h={8}/></Card>
+
+{/* Settlements */}
+{stlmts.length>0&&<Card style={{padding:16,marginBottom:14,background:C.purpleLight,border:`1px solid ${C.purple}33`}} hover={false}>
+<div style={{fontSize:13,fontWeight:700,fontFamily:Fn,color:C.purple,marginBottom:10}}>💸 {T.settlements[lang]}</div>
+{stlmts.map((s,i)=>{const f=getU(s.from);const to=getU(s.to);return(
+<div key={i} style={{padding:"8px 0",display:"flex",alignItems:"center",gap:8,borderBottom:i<stlmts.length-1?`1px solid ${C.purple}22`:"none"}}>
+<Av user={f} size={24}/>
+<span style={{fontSize:12,fontWeight:600}}>{f.name}</span>
+<span style={{fontSize:11,color:C.textDim}}>→</span>
+<Av user={to} size={24}/>
+<span style={{fontSize:12,fontWeight:600}}>{to.name}</span>
+<span style={{fontSize:13,fontWeight:700,color:C.purple,marginLeft:"auto"}}>{fmt(s.amount)} {cur}</span>
+</div>
+)})}
+</Card>}
+
+{exps.length>0&&<Card style={{overflow:"hidden",marginBottom:14}} hover={false}>
+<div style={{padding:"10px 16px",borderBottom:`1px solid ${C.borderLight}`,fontSize:13,fontWeight:700}}>{t("expenses")} ({exps.length})</div>
+{exps.map(e=>editExp===e.id?(<div key={e.id} style={{padding:"10px 16px",background:C.bgAlt,borderBottom:`1px solid ${C.borderLight}`}}>
+<div style={{display:"flex",gap:6,marginBottom:6}}><input value={editExpD.name||""} onChange={ev=>setEED(p=>({...p,name:ev.target.value}))} style={{flex:2,padding:"6px 8px",borderRadius:6,border:`1px solid ${C.border}`,fontSize:12,fontFamily:"inherit"}}/>
+<input value={editExpD.amount||""} onChange={ev=>setEED(p=>({...p,amount:ev.target.value}))} type="number" style={{flex:1,padding:"6px 8px",borderRadius:6,border:`1px solid ${C.border}`,fontSize:12,fontFamily:"inherit",textAlign:"right"}}/>
+<select value={editExpD.currency||cur} onChange={ev=>setEED(p=>({...p,currency:ev.target.value}))} style={{padding:"6px 4px",borderRadius:6,border:`1px solid ${C.border}`,fontSize:11,fontFamily:"inherit"}}>{CURS.map(c=><option key={c}>{c}</option>)}</select></div>
+<div style={{display:"flex",gap:6}}><select value={editExpD.cat||"Food"} onChange={ev=>setEED(p=>({...p,cat:ev.target.value}))} style={{flex:1,padding:"6px 8px",borderRadius:6,border:`1px solid ${C.border}`,fontSize:12,fontFamily:"inherit"}}>{Object.keys(CAT_I).map(c=><option key={c}>{c}</option>)}</select>
+<button onClick={()=>{upT(trip.id,tr=>({...tr,expenses:tr.expenses.map(x=>x.id===e.id?{...x,...editExpD,amount:parseFloat(editExpD.amount)||x.amount}:x)}));setEE(null)}} style={{padding:"6px 14px",borderRadius:6,background:C.sage,border:"none",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer"}}>{t("save")}</button>
+<button onClick={()=>setEE(null)} style={{padding:"6px 10px",borderRadius:6,background:C.bgAlt,border:`1px solid ${C.border}`,fontSize:11,cursor:"pointer"}}>✕</button>
+<button onClick={()=>{upT(trip.id,tr=>({...tr,expenses:tr.expenses.filter(x=>x.id!==e.id)}));setEE(null)}} style={{padding:"6px 10px",borderRadius:6,background:`${C.danger}10`,border:`1px solid ${C.danger}33`,color:C.danger,fontSize:11,cursor:"pointer"}}>🗑</button></div></div>
+):(<div key={e.id} onClick={canE?()=>{setEE(e.id);setEED({name:e.name,amount:e.amount,currency:e.currency||cur,cat:e.cat})}:undefined} style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,borderBottom:`1px solid ${C.borderLight}`,cursor:canE?"pointer":"default"}}>
+<span style={{fontSize:15}}>{CAT_I[e.cat]||"💰"}</span><div style={{flex:1}}><div style={{fontSize:13,fontWeight:500}}>{e.name}</div><div style={{fontSize:11,color:C.textDim}}>{e.cat} · {e.date} · {T.paidBy[lang]}: {getU(e.payer).name}</div></div><div style={{fontSize:13,fontWeight:700}}>{fmt(e.amount)} {e.currency||cur}</div></div>))}</Card>}
+
+{canE&&<Card style={{overflow:"hidden",marginBottom:14}} hover={false}>
+{!newExpO?<div onClick={()=>{setNEO(true);setNE(p=>({...p,currency:cur,payer:currentUser.id}))}} style={{padding:"12px 16px",cursor:"pointer",textAlign:"center",color:C.primary,fontSize:13,fontWeight:600}}>+ {t("addExpense")}</div>
+:<div style={{padding:14}}>
+<div style={{display:"flex",gap:6,marginBottom:8}}><input value={newExp.name} onChange={e=>setNE(p=>({...p,name:e.target.value}))} placeholder={lang==="pl"?"Na co?":"What for?"} style={{flex:2,padding:"8px 10px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:12,fontFamily:"inherit"}}/>
+<input value={newExp.amount} onChange={e=>setNE(p=>({...p,amount:e.target.value}))} placeholder="0" type="number" style={{flex:1,padding:"8px 10px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:12,fontFamily:"inherit",textAlign:"right"}}/></div>
+<div style={{display:"flex",gap:6,marginBottom:8}}>
+<select value={newExp.cat} onChange={e=>setNE(p=>({...p,cat:e.target.value}))} style={{flex:1,padding:"8px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:12,fontFamily:"inherit"}}>{Object.keys(CAT_I).map(c=><option key={c}>{c}</option>)}</select>
+<select value={newExp.currency} onChange={e=>setNE(p=>({...p,currency:e.target.value}))} style={{padding:"8px 6px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:12,fontFamily:"inherit"}}>{CURS.map(c=><option key={c}>{c}</option>)}</select></div>
+<div style={{fontSize:11,fontWeight:600,color:C.textDim,marginBottom:4}}>{T.paidBy[lang]}</div>
+<div style={{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap"}}>{trip.travelers.map(uid=>{const u=getU(uid);return<Pill key={uid} small active={newExp.payer===uid} onClick={()=>setNE(p=>({...p,payer:uid}))}>{u.name}</Pill>})}</div>
+<div style={{display:"flex",gap:6}}><button onClick={()=>{if(!newExp.name||!newExp.amount)return;upT(trip.id,tr=>({...tr,expenses:[...tr.expenses,{id:"e"+Date.now(),name:newExp.name,cat:newExp.cat,amount:parseFloat(newExp.amount),currency:newExp.currency,payer:newExp.payer||currentUser.id,splitAmong:[],date:new Date().toISOString().slice(0,10)}]}));setNE({name:"",cat:"Food",amount:"",currency:cur,payer:currentUser.id,splitAmong:[]});setNEO(false)}} style={{flex:2,padding:"10px",borderRadius:8,background:C.sage,border:"none",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{t("save")}</button>
+<button onClick={()=>setNEO(false)} style={{flex:1,padding:"10px",borderRadius:8,background:C.bgAlt,border:`1px solid ${C.border}`,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>{t("cancel")}</button></div></div>}</Card>}
+
+{exps.length>0&&<Card style={{padding:20,marginBottom:14}} hover={false}>
+<div style={{fontSize:14,fontWeight:700,fontFamily:Fn,marginBottom:14}}>📊 {t("spendingBreakdown")}</div>
+<div style={{display:"flex",gap:20,alignItems:"center",justifyContent:"center",flexWrap:"wrap"}}><Pie data={pie} size={140} currency={cur}/>
+<div style={{flex:1,minWidth:140}}>{pie.sort((a,b)=>b.value-a.value).map(d=>(<div key={d.label} style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:10,height:10,borderRadius:3,background:d.color}}/><span style={{fontSize:12}}>{CAT_I[d.label]} {d.label}</span></div><span style={{fontSize:12,fontWeight:700}}>{fmt(d.value)} <span style={{fontWeight:400,color:C.textDim}}>{Math.round(d.value/tS*100)}%</span></span></div><Bar v={d.value} mx={tS} color={d.color} h={4}/></div>))}</div></div></Card>}
+
+<Card style={{padding:16,background:C.blueLight,border:`1px solid ${C.blue}22`}} hover={false}>
+<div style={{fontSize:12,fontWeight:700,color:C.blue,marginBottom:8}}>💱 {t("exchangeRates")} <span style={{fontWeight:400,fontSize:10,color:C.textDim}}>({t("indicative")})</span></div>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+{hCur!==cur&&<div style={{padding:8,background:C.white,borderRadius:8,fontSize:12}}>1 {hCur} = <strong>{getRate(hCur,cur).toFixed(cur==="JPY"?1:3)} {cur}</strong></div>}
+{hCur!==cur&&<div style={{padding:8,background:C.white,borderRadius:8,fontSize:12}}>1 {cur} = <strong>{getRate(cur,hCur).toFixed(3)} {hCur}</strong></div>}
+{hCur===cur&&<div style={{padding:8,background:C.white,borderRadius:8,fontSize:12,gridColumn:"1/3",textAlign:"center",color:C.textDim}}>{lang==="pl"?"Waluta budżetu = domowa":"Budget = home currency"} ({hCur})</div>}
+</div></Card>
+</div>)})()}
+
+{/* ══ JOURNAL TAB ══ */}
+{tab==="journal"&&(<div>
+{canE&&<Card style={{padding:16,marginBottom:14}} hover={false}><div style={{display:"flex",gap:10}}><Av user={currentUser} size={32}/>
+<div style={{flex:1}}><textarea value={jIn} onChange={e=>setJI(e.target.value)} placeholder={t("writeMemory")} rows={3} style={{width:"100%",padding:"10px",borderRadius:12,border:`1.5px solid ${C.border}`,fontSize:13,fontFamily:"inherit",resize:"vertical",background:C.bg}}/>
+<div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}><button onClick={()=>{if(!jIn.trim())return;upT(trip.id,tr=>({...tr,journal:[...tr.journal,{id:"j"+Date.now(),date:new Date().toISOString().slice(0,10),author:currentUser.id,type:"text",content:jIn}]}));setJI("")}} style={{padding:"8px 18px",borderRadius:10,background:C.primary,border:"none",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{lang==="pl"?"Opublikuj":"Post"}</button></div></div></div></Card>}
+{(trip.journal||[]).length===0?<Card style={{padding:32,textAlign:"center"}} hover={false}><div style={{fontSize:40,marginBottom:12}}>📓</div><div style={{fontFamily:Fn,fontWeight:700}}>{t("yourJournal")}</div></Card>
+:[...trip.journal].reverse().map(j=>{const a=getU(j.author);return(<Card key={j.id} style={{padding:16,marginBottom:10}} hover={false}><div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}><Av user={a} size={28}/><span style={{fontSize:13,fontWeight:600}}>{a.name}</span><span style={{fontSize:11,color:C.textDim}}>{j.date}</span></div><p style={{fontSize:13,color:C.textSec,lineHeight:1.6}}>{j.content}</p></Card>)})}</div>)}
+
+{/* ══ BOOKING TAB ══ */}
+{tab==="booking"&&(<div>
+{(trip.deals||[]).length>0&&<>{trip.deals.map((d,i)=>(<Card key={i} style={{padding:14,marginBottom:10}} onClick={()=>window.open(d.url,"_blank")}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><div style={{fontSize:13,fontWeight:700}}>{d.name}</div><span style={{fontSize:10,fontWeight:700,color:"#fff",background:d.pColor,padding:"2px 6px",borderRadius:4,display:"inline-block",marginTop:4}}>{d.partner}</span></div><div style={{textAlign:"right"}}><div style={{fontSize:15,fontWeight:800,color:C.primary,fontFamily:Fn}}>{d.price}</div><div style={{fontSize:12,color:C.primary}}>→</div></div></div></Card>))}</>}
+
+{/* Tickets Required */}
+{(()=>{const needTickets=(trip.dayData||[]).flatMap((d,dI)=>d.items.filter(it=>it.cost>0&&it.type!=="food"&&it.type!=="transport").map(it=>({...it,dayIdx:dI,dayTitle:`${lang==="pl"?"Dzień":"Day"} ${d.day}: ${d.title}`})));return needTickets.length>0&&<><div style={{fontSize:14,fontWeight:700,fontFamily:Fn,marginTop:4,marginBottom:6}}>🎟️ {t("ticketsNeeded")}</div><p style={{fontSize:12,color:C.textSec,marginBottom:10}}>{t("ticketsDesc")}</p>{needTickets.map((it,i)=>(<Card key={it.id||i} style={{padding:14,marginBottom:8,border:`1px solid ${it.ticketBought?C.sage:C.gold}33`,background:it.ticketBought?C.sageLight:C.goldLight}} hover={false}><div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:16}}>{tE[it.type]||"📍"}</span><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600}}>{it.name}</div><div style={{fontSize:11,color:C.textDim}}>{it.dayTitle} · {it.time} · {it.cost} {trip.currency}</div>{it.ticketUrl&&<a href={it.ticketUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.blue,textDecoration:"none"}}>🔗 {lang==="pl"?"Link":"Link"} ↗</a>}</div><span style={{fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:99,background:it.ticketBought?C.sage:C.gold,color:"#fff"}}>{it.ticketBought?t("ticketBought"):t("ticketNeeded")}</span></div>{canE&&<div style={{display:"flex",gap:6,marginTop:8}}>{!it.ticketBought&&<button onClick={()=>upT(trip.id,tr=>({...tr,dayData:tr.dayData.map((d,di)=>di===it.dayIdx?{...d,items:d.items.map(x=>x.id===it.id?{...x,ticketBought:true}:x)}:d)}))} style={{padding:"5px 12px",borderRadius:6,background:C.sage,border:"none",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>✓ {lang==="pl"?"Kupione":"Bought"}</button>}<button onClick={()=>{const url=prompt(t("addTicketLink"),it.ticketUrl||"https://");if(url!==null)upT(trip.id,tr=>({...tr,dayData:tr.dayData.map((d,di)=>di===it.dayIdx?{...d,items:d.items.map(x=>x.id===it.id?{...x,ticketUrl:url}:x)}:d)}))}} style={{padding:"5px 12px",borderRadius:6,background:C.bgAlt,border:`1px solid ${C.border}`,color:C.textSec,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>🔗 Link</button></div>}</Card>))}</>})()}
+
+{/* Compare Stays */}
+<div style={{fontSize:14,fontWeight:700,fontFamily:Fn,marginTop:16,marginBottom:6}}>🏨 {t("compareStays")}</div>
+<p style={{fontSize:12,color:C.textSec,marginBottom:12}}>{t("compareStaysDesc")}</p>
+{(trip.comparisons||[]).map(c=>{const pr=getU(c.proposedBy);const mv=c.votes?.[currentUser?.id];const tv=c.votes?Object.values(c.votes).filter(v=>v===1).length:0;
+return(<Card key={c.id} style={{padding:14,marginBottom:10}} hover={false}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+<div style={{flex:1}}><div style={{fontSize:14,fontWeight:700,cursor:"pointer",color:C.blue}} onClick={()=>window.open(c.url,"_blank")}>{c.name} ↗</div>
+<div style={{display:"flex",alignItems:"center",gap:6,marginTop:4}}><span style={{fontSize:10,fontWeight:700,color:"#fff",background:c.source==="Airbnb"?"#FF5A5F":"#003580",padding:"2px 6px",borderRadius:4}}>{c.source}</span><span style={{fontSize:12,fontWeight:700,color:C.primary}}>{c.price}</span>{c.rating&&<span style={{fontSize:11,color:C.gold}}>★ {c.rating}</span>}</div></div>
+<div style={{display:"flex",alignItems:"center",gap:4,padding:"4px 8px",borderRadius:8,background:C.bgAlt}}><Av user={pr} size={18}/><span style={{fontSize:10,fontWeight:600,color:C.textSec}}>{pr.name}</span></div></div>
+{c.notes&&<p style={{fontSize:12,color:C.textSec,marginBottom:6}}>{c.notes}</p>}
+<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+{(c.pros||[]).map((p,i)=><span key={i} style={{fontSize:10,padding:"3px 8px",borderRadius:99,background:C.sageLight,color:C.sage}}>✓ {p}</span>)}
+{(c.cons||[]).map((p,i)=><span key={i} style={{fontSize:10,padding:"3px 8px",borderRadius:99,background:C.coralLight,color:C.coral}}>✕ {p}</span>)}</div>
+<div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderTop:`1px solid ${C.borderLight}`}}>
+{canE&&<button onClick={()=>upT(trip.id,tr=>({...tr,comparisons:tr.comparisons.map(x=>x.id===c.id?{...x,votes:{...x.votes,[currentUser.id]:mv===1?0:1}}:x)}))} style={{padding:"5px 12px",borderRadius:8,background:mv===1?C.sage:C.bgAlt,border:`1px solid ${mv===1?C.sage:C.border}`,color:mv===1?"#fff":C.textSec,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>👍 {t("approveThis")}</button>}
+<span style={{fontSize:11,color:C.textDim}}>{tv} {t("votes")}</span></div></Card>)})}
+
+{canE&&<Card style={{padding:14,marginBottom:16}} hover={false}>
+<div style={{fontSize:12,fontWeight:700,color:C.textDim,marginBottom:8}}>{t("proposePlac")}</div>
+<input value={compIn.name} onChange={e=>setCI(p=>({...p,name:e.target.value}))} placeholder={lang==="pl"?"Nazwa":"Name"} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:12,fontFamily:"inherit",background:C.bg,marginBottom:6}}/>
+<input value={compIn.url} onChange={e=>setCI(p=>({...p,url:e.target.value}))} placeholder="URL (Booking/Airbnb)" style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:12,fontFamily:"inherit",background:C.bg,marginBottom:6}}/>
+<div style={{display:"flex",gap:6,marginBottom:8}}><input value={compIn.price} onChange={e=>setCI(p=>({...p,price:e.target.value}))} placeholder={lang==="pl"?"Cena/noc":"Price/night"} style={{flex:1,padding:"8px 10px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:12,fontFamily:"inherit",background:C.bg}}/><input value={compIn.notes} onChange={e=>setCI(p=>({...p,notes:e.target.value}))} placeholder={lang==="pl"?"Notatki":"Notes"} style={{flex:1,padding:"8px 10px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:12,fontFamily:"inherit",background:C.bg}}/></div>
+<button onClick={()=>{if(!compIn.name)return;upT(trip.id,tr=>({...tr,comparisons:[...tr.comparisons,{id:"c"+Date.now(),name:compIn.name,url:compIn.url,source:compIn.url?.includes("airbnb")?"Airbnb":"Booking.com",price:compIn.price,rating:null,notes:compIn.notes,pros:[],cons:[],proposedBy:currentUser.id,votes:{[currentUser.id]:1}}]}));setCI({name:"",url:"",price:"",notes:""})}} style={{width:"100%",padding:"10px",borderRadius:10,background:C.primary,border:"none",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>+ {t("add")}</button></Card>}
+</div>)}
+
+</div>{/* end padding div */}
+
+
+</div>)}{/* end trip view */}
+
+{/* ═══ MODALS ═══ */}
+
+{/* Share Modal */}
+<Modal open={showShare} onClose={()=>setSSh(false)} title={`🔗 ${t("shareTrip")}`}>
+{trip&&<>
+<Card style={{padding:16,marginBottom:12,background:C.blueLight,border:`1px solid ${C.blue}33`}} hover={false}>
+<div style={{fontSize:13,fontWeight:600,marginBottom:8}}>{lang==="pl"?"Link do podróży":"Trip link"}</div>
+<div style={{display:"flex",gap:8}}>
+<input readOnly value={`${window.location.origin}/?trip=${trip.shareToken||trip.id}`} style={{flex:1,padding:"10px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:11,fontFamily:"monospace",background:C.bg}}/>
+<button onClick={handleShareCopy} style={{padding:"10px 16px",borderRadius:8,background:linkCopied?C.sage:C.primary,border:"none",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>{linkCopied?"✓":t("copyLink")}</button>
+</div></Card>
+
+<button onClick={handleICSExport} style={{width:"100%",padding:"12px",borderRadius:12,background:C.bgAlt,border:`1px solid ${C.border}`,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",color:C.text,marginBottom:12}}>📅 {t("exportCalendar")}</button>
+
+{canE&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0"}}>
+<span style={{fontSize:12,fontWeight:600,flex:1}}>{t("publicTrip")}</span>
+<button onClick={()=>upT(trip.id,tr=>({...tr,isPublic:!tr.isPublic}))} style={{width:48,height:26,borderRadius:13,background:trip.isPublic?C.sage:C.border,border:"none",cursor:"pointer",position:"relative",transition:"background 0.2s"}}><div style={{width:22,height:22,borderRadius:11,background:"#fff",position:"absolute",top:2,left:trip.isPublic?24:2,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/></button>
+</div>}
+</>}</Modal>
+
+{/* Trip Wizard */}
+<Modal open={showWiz} onClose={()=>{setSW(false);setWS(0)}} title={wStep===0?t("whereGoing"):wStep===1?t("whenWho"):t("almostThere")}>
+{wStep===0&&<div><input value={wData.dest} onChange={e=>setWD(p=>({...p,dest:e.target.value}))} placeholder={lang==="pl"?"np. Barcelona, Tokio, Rzym":"e.g. Barcelona, Tokyo, Rome"} autoFocus style={{width:"100%",padding:"14px 16px",borderRadius:12,border:`1.5px solid ${C.border}`,fontSize:15,fontFamily:"inherit",background:C.bg,marginBottom:16}}/>
+<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>{INSP.map(d=><Pill key={d.name} active={wData.dest===d.name} onClick={()=>setWD(p=>({...p,dest:d.name}))}>{d.name}</Pill>)}</div>
+<button disabled={!wData.dest} onClick={()=>setWS(1)} style={{width:"100%",padding:"14px",borderRadius:12,background:wData.dest?C.primary:C.border,border:"none",color:"#fff",fontSize:14,fontWeight:700,cursor:wData.dest?"pointer":"default",fontFamily:"inherit"}}>{lang==="pl"?"Dalej →":"Next →"}</button></div>}
+{wStep===1&&<div><div style={{display:"flex",gap:10,marginBottom:12}}><div style={{flex:1}}><label style={{fontSize:11,color:C.textDim,fontWeight:600,display:"block",marginBottom:4}}>{lang==="pl"?"Od":"From"}</label><input type="date" value={wData.startDate} onChange={e=>setWD(p=>({...p,startDate:e.target.value}))} style={{width:"100%",padding:"10px",borderRadius:10,border:`1.5px solid ${C.border}`,fontSize:13,fontFamily:"inherit",background:C.bg}}/></div><div style={{flex:1}}><label style={{fontSize:11,color:C.textDim,fontWeight:600,display:"block",marginBottom:4}}>{lang==="pl"?"Do":"To"}</label><input type="date" value={wData.endDate} onChange={e=>setWD(p=>({...p,endDate:e.target.value}))} style={{width:"100%",padding:"10px",borderRadius:10,border:`1.5px solid ${C.border}`,fontSize:13,fontFamily:"inherit",background:C.bg}}/></div></div>
+<label style={{fontSize:11,color:C.textDim,fontWeight:600,display:"block",marginBottom:4}}>{t("travelers")}</label>
+<div style={{display:"flex",gap:6,marginBottom:12}}>{[1,2,3,4,5,"6+"].map(n=><Pill key={n} active={wData.travelers===n} onClick={()=>setWD(p=>({...p,travelers:n}))}>{n}</Pill>)}</div>
+<div style={{display:"flex",gap:8}}><button onClick={()=>setWS(0)} style={{flex:1,padding:"12px",borderRadius:12,background:C.bgAlt,border:`1px solid ${C.border}`,fontSize:13,cursor:"pointer",fontFamily:"inherit",color:C.textSec}}>←</button><button onClick={()=>setWS(2)} style={{flex:2,padding:"12px",borderRadius:12,background:C.primary,border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{lang==="pl"?"Dalej →":"Next →"}</button></div></div>}
+{wStep===2&&<div><input value={wData.name} onChange={e=>setWD(p=>({...p,name:e.target.value}))} placeholder={`"${wData.dest} Adventure"`} style={{width:"100%",padding:"14px 16px",borderRadius:12,border:`1.5px solid ${C.border}`,fontSize:15,fontFamily:"inherit",background:C.bg,marginBottom:16}}/>
+<Card style={{padding:16,marginBottom:16,background:C.bgAlt}} hover={false}><div style={{fontSize:12,fontWeight:700,color:C.textDim,marginBottom:4}}>{t("tripSummary")}</div><div style={{fontSize:14,fontWeight:700,fontFamily:Fn}}>{wData.name||`${wData.dest} Trip`}</div><div style={{fontSize:12,color:C.textSec}}>📍 {wData.dest} · 📅 {wData.startDate||"?"} – {wData.endDate||"?"} · 👥 {wData.travelers}</div></Card>
+<div style={{display:"flex",gap:8}}><button onClick={()=>setWS(1)} style={{flex:1,padding:"12px",borderRadius:12,background:C.bgAlt,border:`1px solid ${C.border}`,fontSize:13,cursor:"pointer",fontFamily:"inherit",color:C.textSec}}>←</button><button onClick={createTrip} style={{flex:2,padding:"14px",borderRadius:12,background:`linear-gradient(135deg,${C.primary},${C.coral})`,border:"none",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{t("createTrip")}</button></div></div>}
+</Modal>
+
+{/* Add Day */}
+<Modal open={showAddDay} onClose={()=>setSAD(false)} title={t("addDay")}>
+<input value={newDay.title} onChange={e=>setND(p=>({...p,title:e.target.value}))} placeholder={t("dayTitle")} autoFocus style={{width:"100%",padding:"12px",borderRadius:10,border:`1.5px solid ${C.border}`,fontSize:13,fontFamily:"inherit",background:C.bg,marginBottom:8}}/>
+<input type="date" value={newDay.date} onChange={e=>setND(p=>({...p,date:e.target.value}))} style={{width:"100%",padding:"12px",borderRadius:10,border:`1.5px solid ${C.border}`,fontSize:13,fontFamily:"inherit",background:C.bg,marginBottom:12}}/>
+<button onClick={()=>{if(!newDay.title)return;upT(trip.id,tr=>({...tr,dayData:[...tr.dayData,{day:tr.dayData.length+1,date:newDay.date||`Day ${tr.dayData.length+1}`,title:newDay.title,items:[],weather:null,img:null,steps:{}}]}));setND({title:"",date:""});setSAD(false)}} style={{width:"100%",padding:"14px",borderRadius:12,background:C.primary,border:"none",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{t("add")}</button></Modal>
+
+{/* Add Activity with coordinates */}
+<Modal open={showAddAct!==null} onClose={()=>setSAA(null)} title={t("addActivity")}>
+<input value={newAct.name} onChange={e=>setNA(p=>({...p,name:e.target.value}))} placeholder={t("activityName")} autoFocus style={{width:"100%",padding:"12px",borderRadius:10,border:`1.5px solid ${C.border}`,fontSize:13,fontFamily:"inherit",background:C.bg,marginBottom:8}}/>
+<div style={{display:"flex",gap:8,marginBottom:8}}>
+<div style={{flex:1}}><label style={{fontSize:11,color:C.textDim,fontWeight:600}}>{t("time")}</label><input type="time" value={newAct.time} onChange={e=>setNA(p=>({...p,time:e.target.value}))} style={{width:"100%",padding:"8px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:12,fontFamily:"inherit",background:C.bg}}/></div>
+<div style={{flex:1}}><label style={{fontSize:11,color:C.textDim,fontWeight:600}}>{t("duration")}</label><select value={newAct.duration} onChange={e=>setNA(p=>({...p,duration:e.target.value}))} style={{width:"100%",padding:"8px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:12,fontFamily:"inherit",background:C.bg}}>{["30min","45min","1h","1.5h","2h","2.5h","3h","4h"].map(d=><option key={d}>{d}</option>)}</select></div>
+<div style={{flex:1}}><label style={{fontSize:11,color:C.textDim,fontWeight:600}}>{t("type")}</label><select value={newAct.type} onChange={e=>setNA(p=>({...p,type:e.target.value}))} style={{width:"100%",padding:"8px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:12,fontFamily:"inherit",background:C.bg}}>{Object.keys(tE).map(tp=><option key={tp}>{tp}</option>)}</select></div></div>
+<div style={{display:"flex",gap:8,marginBottom:8}}>
+<input value={newAct.desc} onChange={e=>setNA(p=>({...p,desc:e.target.value}))} placeholder={lang==="pl"?"Opis":"Description"} style={{flex:2,padding:"8px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:12,fontFamily:"inherit",background:C.bg}}/>
+<input value={newAct.cost} onChange={e=>setNA(p=>({...p,cost:parseInt(e.target.value)||0}))} placeholder={t("cost")} type="number" style={{flex:1,padding:"8px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:12,fontFamily:"inherit",background:C.bg,textAlign:"right"}}/></div>
+<div style={{display:"flex",gap:8,marginBottom:12}}>
+<div style={{flex:1}}><label style={{fontSize:11,color:C.textDim,fontWeight:600}}>📍 Lat</label><input value={newAct.lat||""} onChange={e=>setNA(p=>({...p,lat:parseFloat(e.target.value)||null}))} placeholder="44.4268" type="number" step="0.0001" style={{width:"100%",padding:"8px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:12,fontFamily:"inherit",background:C.bg}}/></div>
+<div style={{flex:1}}><label style={{fontSize:11,color:C.textDim,fontWeight:600}}>📍 Lng</label><input value={newAct.lng||""} onChange={e=>setNA(p=>({...p,lng:parseFloat(e.target.value)||null}))} placeholder="26.1025" type="number" step="0.0001" style={{width:"100%",padding:"8px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:12,fontFamily:"inherit",background:C.bg}}/></div>
+</div>
+<p style={{fontSize:11,color:C.textDim,marginBottom:10}}>{lang==="pl"?"Dodaj współrzędne aby atrakcja pojawiła się na mapie. Propozycja wymaga głosowania (>50%).":"Add coordinates to show on map. Proposal requires voting (>50%)."}</p>
+<button onClick={()=>{if(!newAct.name||showAddAct===null)return;upT(trip.id,tr=>({...tr,dayData:tr.dayData.map((d,i)=>i===showAddAct?{...d,items:[...d.items,{id:"a"+Date.now(),time:newAct.time,name:newAct.name,desc:newAct.desc,type:newAct.type,duration:newAct.duration,cost:newAct.cost,rating:0,votes:{[currentUser.id]:1},fav:{},status:trip.travelers.length<=1?"approved":"pending",lat:newAct.lat,lng:newAct.lng}]}:d)}));setSAA(null)}} style={{width:"100%",padding:"14px",borderRadius:12,background:C.primary,border:"none",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>+ {t("proposeActivity")}</button></Modal>
+
+{/* Invite */}
+<Modal open={showInv} onClose={()=>setSI(false)} title={t("inviteSomeone")}>
+<input value={invEmail} onChange={e=>setIE(e.target.value)} placeholder="friend@email.com" style={{width:"100%",padding:"12px",borderRadius:10,border:`1.5px solid ${C.border}`,fontSize:13,fontFamily:"inherit",background:C.bg,marginBottom:12}}/>
+{[{id:"companion",t:tO(ROLES.companion.l),d:lang==="pl"?"Edycja planu, budżet, dziennik.":"Edit plan, budget, journal.",i:"🤝"},{id:"observer",t:tO(ROLES.observer.l),d:lang==="pl"?"Tylko podgląd.":"View only.",i:"👁️"}].map(r=>(<div key={r.id} onClick={()=>setIR(r.id)} style={{padding:14,borderRadius:12,border:`1.5px solid ${invRole===r.id?C.primary:C.border}`,marginBottom:8,cursor:"pointer",background:invRole===r.id?C.primaryLight:"transparent"}}><div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:18}}>{r.i}</span><div><div style={{fontSize:13,fontWeight:600}}>{r.t}</div><div style={{fontSize:11,color:C.textSec}}>{r.d}</div></div></div></div>))}
+<button onClick={()=>{setSI(false);setIE("");showToast(lang==="pl"?"Zaproszenie wysłane!":"Invitation sent!")}} style={{width:"100%",marginTop:8,padding:"14px",borderRadius:12,background:C.primary,border:"none",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{lang==="pl"?"Wyślij zaproszenie":"Send Invitation"}</button></Modal>
+
+{/* Profile */}
+<Modal open={showProf} onClose={()=>setSP(false)} title={t("myProfile")} wide>
+{currentUser&&<>
+<div style={{display:"flex",alignItems:"center",gap:16,marginBottom:20}}><div style={{position:"relative",cursor:"pointer"}} onClick={()=>document.getElementById("photoIn")?.click()}><Av user={currentUser} size={56}/><div style={{position:"absolute",inset:0,borderRadius:"50%",background:"rgba(0,0,0,0.35)",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,transition:"opacity 0.2s"}} onMouseEnter={e=>e.currentTarget.style.opacity=1} onMouseLeave={e=>e.currentTarget.style.opacity=0}><span style={{color:"#fff",fontSize:16}}>📷</span></div><input id="photoIn" type="file" accept="image/*" onChange={handlePhotoUpload} style={{display:"none"}}/></div><div><div style={{fontSize:18,fontWeight:800,fontFamily:Fn}}>{currentUser.name}</div><div style={{fontSize:12,color:C.textSec}}>{currentUser.email}</div><div style={{fontSize:10,color:C.textDim,cursor:"pointer",marginTop:2}} onClick={()=>document.getElementById("photoIn")?.click()}>{t("clickToChangePhoto")}</div><span style={{fontSize:10,fontWeight:700,color:ROLES[currentUser.role].color,background:`${ROLES[currentUser.role].color}15`,padding:"3px 10px",borderRadius:99,textTransform:"uppercase",marginTop:4,display:"inline-block"}}>{tO(ROLES[currentUser.role].l)}</span></div></div>
+<div style={{fontSize:12,fontWeight:700,color:C.textDim,marginBottom:8}}>{t("socialMedia").toUpperCase()}</div>
+{[{k:"instagram",i:"📸",p:"@username"},{k:"facebook",i:"📘",p:"Link"},{k:"tiktok",i:"🎵",p:"@username"}].map(s=>(<div key={s.k} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:14,width:24}}>{s.i}</span><input value={currentUser.social?.[s.k]||""} onChange={e=>{const v=e.target.value;setCU(p=>({...p,social:{...p.social,[s.k]:v}}));setUsers(us=>us.map(u=>u.id===currentUser.id?{...u,social:{...u.social,[s.k]:v}}:u))}} placeholder={s.p} style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:12,fontFamily:"inherit",background:C.bg}}/></div>))}
+
+<div style={{fontSize:14,fontWeight:700,fontFamily:Fn,marginTop:16,marginBottom:6}}>🫂 {t("travelFriends")}</div>
+<p style={{fontSize:12,color:C.textSec,marginBottom:10}}>{t("travelFriendsDesc")}</p>
+{(currentUser.friends||[]).length===0&&<p style={{fontSize:12,color:C.textDim,fontStyle:"italic"}}>{t("noFriendsYet")}</p>}
+{(currentUser.friends||[]).map(fid=>{const f=getU(fid);return(<div key={fid} style={{padding:"8px 0",display:"flex",alignItems:"center",gap:10,borderBottom:`1px solid ${C.borderLight}`}}><Av user={f} size={28}/><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600}}>{f.name}</div><div style={{fontSize:11,color:C.textDim}}>{f.email}</div></div><button onClick={()=>{setCU(p=>({...p,friends:p.friends.filter(x=>x!==fid)}));setUsers(us=>us.map(u=>u.id===currentUser.id?{...u,friends:u.friends.filter(x=>x!==fid)}:u))}} style={{background:"none",border:"none",color:C.danger,fontSize:12,cursor:"pointer"}}>✕</button></div>)})}
+{!showAF?<button onClick={()=>setSAF(true)} style={{marginTop:8,padding:"8px 16px",borderRadius:8,background:C.blueLight,border:`1px solid ${C.blue}33`,color:C.blue,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>+ {t("addFriend")}</button>
+:<div style={{marginTop:8}}><input value={fSearch} onChange={e=>setFS(e.target.value)} placeholder={lang==="pl"?"Szukaj...":"Search..."} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:12,fontFamily:"inherit",marginBottom:6,background:C.bg}}/>
+{users.filter(u=>u.id!==currentUser.id&&!(currentUser.friends||[]).includes(u.id)&&(u.name.toLowerCase().includes(fSearch.toLowerCase()))).map(u=>(<div key={u.id} onClick={()=>{setCU(p=>({...p,friends:[...(p.friends||[]),u.id]}));setUsers(us=>us.map(x=>x.id===currentUser.id?{...x,friends:[...(x.friends||[]),u.id]}:x));setSAF(false);setFS("")}} style={{padding:"8px 10px",display:"flex",alignItems:"center",gap:8,borderRadius:8,cursor:"pointer",border:`1px solid ${C.border}`,marginBottom:4}}><Av user={u} size={24}/><span style={{fontSize:12,fontWeight:600}}>{u.name}</span></div>))}</div>}
+
+<div style={{fontSize:14,fontWeight:700,fontFamily:Fn,marginTop:16,marginBottom:10}}>{t("tripStats")}</div>
+<div style={{display:"flex",gap:10}}>{[{l:lang==="pl"?"Podróże":"Trips",v:trips.filter(tr=>tr.travelers.includes(currentUser.id)).length},{l:lang==="pl"?"Kraje":"Countries",v:3},{l:lang==="pl"?"Dni":"Days",v:13}].map(s=>(<div key={s.l} style={{flex:1,padding:12,background:C.bgAlt,borderRadius:12,textAlign:"center"}}><div style={{fontSize:20,fontWeight:800,fontFamily:Fn,color:C.primary}}>{s.v}</div><div style={{fontSize:10,color:C.textDim}}>{s.l}</div></div>))}</div>
+
+<button onClick={()=>{setLoggedIn(false);setCU(null);setScr("home");setAT(null);setSP(false)}} style={{width:"100%",marginTop:20,padding:"12px",borderRadius:12,background:C.bgAlt,border:`1px solid ${C.danger}33`,color:C.danger,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{t("signOut")}</button>
+</>}</Modal>
+
+{/* Travelers */}
+<Modal open={showTrav} onClose={()=>setST(false)} title={t("tripMembers")} wide>
+{trip&&<>
+<div style={{fontSize:12,fontWeight:700,color:C.textDim,marginBottom:8,textTransform:"uppercase"}}>{t("travelers")} ({trip.travelers.length})</div>
+{trip.travelers.map(uid=>{const u=getU(uid);return(<div key={uid} style={{padding:"12px 0",display:"flex",alignItems:"center",gap:12,borderBottom:`1px solid ${C.borderLight}`}}><Av user={u} size={36}/><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600}}>{u.name}</div><div style={{fontSize:11,color:C.textDim}}>{u.email}</div>{u.social?.instagram&&<span style={{fontSize:10,color:C.purple}}>📸 {u.social.instagram}</span>}</div><span style={{fontSize:10,fontWeight:700,color:ROLES[u.role||"user"].color,background:`${ROLES[u.role||"user"].color}15`,padding:"3px 10px",borderRadius:99,textTransform:"uppercase"}}>{tO(ROLES[u.role||"user"].l)}</span></div>)})}
+{(trip.observers||[]).length>0&&<><div style={{fontSize:12,fontWeight:700,color:C.textDim,marginTop:16,marginBottom:8,textTransform:"uppercase"}}>{t("observers")} ({trip.observers.length})</div>{trip.observers.map(uid=>{const u=getU(uid);return(<div key={uid} style={{padding:"12px 0",display:"flex",alignItems:"center",gap:12,borderBottom:`1px solid ${C.borderLight}`}}><Av user={u} size={36}/><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600}}>{u.name}</div></div><span style={{fontSize:10,fontWeight:700,color:ROLES.observer.color,background:`${ROLES.observer.color}15`,padding:"3px 10px",borderRadius:99,textTransform:"uppercase"}}>{tO(ROLES.observer.l)}</span></div>)})}</>}
+{canE&&<button onClick={()=>{setST(false);setSI(true)}} style={{width:"100%",marginTop:16,padding:"12px",borderRadius:12,background:C.primary,border:"none",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{t("inviteSomeone")}</button>}
+</>}</Modal>
+
+{/* Save/Load Packing */}
+<Modal open={showSP2} onClose={()=>setSP2(false)} title={`💾 ${t("saveList")}`}>
+<input value={spName} onChange={e=>setSPN(e.target.value)} placeholder={lang==="pl"?"Nazwa listy":"List name"} autoFocus style={{width:"100%",padding:"12px",borderRadius:10,border:`1.5px solid ${C.border}`,fontSize:13,fontFamily:"inherit",background:C.bg,marginBottom:12}}/>
+<button onClick={()=>{if(!spName.trim()||!trip)return;setSL(p=>[...p,{id:"sl_"+Date.now(),name:spName.trim(),items:{...trip.packing}}]);setSP2(false);setSPN("")}} style={{width:"100%",padding:"14px",borderRadius:12,background:C.sage,border:"none",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{t("save")}</button></Modal>
+
+<Modal open={showLP} onClose={()=>setSLP(false)} title={`📂 ${t("loadList")}`}>
+{savedLists.map(sl=>(<Card key={sl.id} style={{padding:14,marginBottom:8,cursor:"pointer"}} onClick={()=>{if(!trip)return;const np={};Object.entries(sl.items).forEach(([c,items])=>{np[c]=items.map(it=>({...it,packed:false}))});upT(trip.id,tr=>({...tr,packing:{...tr.packing,...np}}));setSLP(false)}}><div style={{display:"flex",justifyContent:"space-between"}}><div><div style={{fontSize:14,fontWeight:600}}>{sl.name}</div><div style={{fontSize:11,color:C.textDim}}>{Object.values(sl.items).flat().length} items</div></div><button onClick={e=>{e.stopPropagation();setSL(p=>p.filter(x=>x.id!==sl.id))}} style={{background:"none",border:"none",color:C.danger,fontSize:14,cursor:"pointer"}}>🗑</button></div></Card>))}
+{savedLists.length===0&&<div style={{textAlign:"center",padding:20,color:C.textDim}}>{lang==="pl"?"Brak zapisanych list.":"No saved lists."}</div>}</Modal>
+
+{/* Celebration */}
+<Modal open={showCelebration} onClose={()=>setSC(false)} title="">
+<div style={{textAlign:"center",padding:20}}>
+<div style={{fontSize:60,marginBottom:16}}>🎉</div>
+<div style={{fontSize:20,fontWeight:800,fontFamily:Fn,marginBottom:8}}>{t("allApprovedTitle")}</div>
+<p style={{fontSize:14,color:C.textSec,lineHeight:1.6,marginBottom:16}}>{t("allApprovedMsg")}</p>
+<button onClick={()=>setSC(false)} style={{padding:"14px 32px",borderRadius:12,background:`linear-gradient(135deg,${C.primary},${C.coral})`,border:"none",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:Fn}}>{t("letsGo")}</button>
+</div></Modal>
+
+{/* PWA Install Banner */}
+<InstallBanner lang={lang}/>
+
+</div>)}
